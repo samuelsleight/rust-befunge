@@ -148,15 +148,8 @@ impl Program {
         let width = self.code[0].len();
         let height = self.code.len();
 
-        let mut normal_states = Vec::new();
-        normal_states.grow_fn(height, |_| {
-            let mut v = Vec::new();
-            v.grow(width, &HashMap::new());
-            v
-        });
-
-        let mut string_states = Vec::new();
-        string_states.grow_fn(height, |_| {
+        let mut states = Vec::new();
+        states.grow_fn(height, |_| {
             let mut v = Vec::new();
             v.grow(width, &HashMap::new());
             v
@@ -174,13 +167,12 @@ impl Program {
             }
 
             let mut ip = ip_queue[state].clone();
+            states.get_mut(ip.y as uint).get_mut(ip.x as uint).find_or_insert(ip.delta(), state);
 
             actions.push(Vec::new());
 
             loop {
                 if stringmode {
-                    string_states.get_mut(ip.y as uint).get_mut(ip.x as uint).find_or_insert(ip.delta(), state);
-
                     match self.code[ip.y as uint][ip.x as uint] {
                         '"' => stringmode = false,
                         c => { 
@@ -189,8 +181,6 @@ impl Program {
                         }
                     }
                 } else {
-                    normal_states.get_mut(ip.y as uint).get_mut(ip.x as uint).find_or_insert(ip.delta(), state);
-
                     match self.code[ip.y as uint][ip.x as uint] {
                         '>' => ip.right(),
                         '<' => ip.left(),
@@ -275,7 +265,7 @@ impl Program {
                             loop {
                                 new_ip.advance(width, height);
 
-                                let new_state = *normal_states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
+                                let new_state = *states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
                                 if new_state == next_state {
                                     ip_queue.push(new_ip);
                                     next_state += 1;
@@ -296,13 +286,13 @@ impl Program {
                             let true_ip = if c == '_' { ip.new_left(width, height) } else { ip.new_up(width, height) };
                             let false_ip = if c == '_' { ip.new_right(width, height) } else { ip.new_down(width, height) };
 
-                            let true_state = *normal_states.get_mut(true_ip.y as uint).get_mut(true_ip.x as uint).find_or_insert(true_ip.delta(), next_state);
+                            let true_state = *states.get_mut(true_ip.y as uint).get_mut(true_ip.x as uint).find_or_insert(true_ip.delta(), next_state);
                             if true_state == next_state {
                                 ip_queue.push(true_ip);
                                 next_state += 1
                             }
 
-                            let false_state = *normal_states.get_mut(false_ip.y as uint).get_mut(false_ip.x as uint).find_or_insert(false_ip.delta(), next_state);
+                            let false_state = *states.get_mut(false_ip.y as uint).get_mut(false_ip.x as uint).find_or_insert(false_ip.delta(), next_state);
                             if false_state == next_state {
                                 ip_queue.push(false_ip);
                                 next_state += 1
@@ -318,19 +308,19 @@ impl Program {
                             let l_ip = ip.new_turn_left(width, height);
                             let r_ip = ip.new_turn_right(width, height);
 
-                            let s_state = *normal_states.get_mut(s_ip.y as uint).get_mut(s_ip.x as uint).find_or_insert(s_ip.delta(), next_state);
+                            let s_state = *states.get_mut(s_ip.y as uint).get_mut(s_ip.x as uint).find_or_insert(s_ip.delta(), next_state);
                             if s_state == next_state {
                                 ip_queue.push(s_ip);
                                 next_state += 1
                             }
 
-                            let l_state = *normal_states.get_mut(l_ip.y as uint).get_mut(l_ip.x as uint).find_or_insert(l_ip.delta(), next_state);
+                            let l_state = *states.get_mut(l_ip.y as uint).get_mut(l_ip.x as uint).find_or_insert(l_ip.delta(), next_state);
                             if l_state == next_state {
                                 ip_queue.push(l_ip);
                                 next_state += 1
                             }
 
-                            let r_state = *normal_states.get_mut(r_ip.y as uint).get_mut(r_ip.x as uint).find_or_insert(r_ip.delta(), next_state);
+                            let r_state = *states.get_mut(r_ip.y as uint).get_mut(r_ip.x as uint).find_or_insert(r_ip.delta(), next_state);
                             if r_state == next_state {
                                 ip_queue.push(r_ip);
                                 next_state += 1
