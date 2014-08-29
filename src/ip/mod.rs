@@ -1,4 +1,4 @@
-#[deriving(Show, Clone)]
+#[deriving(Show, Clone, PartialEq, Eq)]
 pub struct IP {
     pub x: int,
     pub y: int,

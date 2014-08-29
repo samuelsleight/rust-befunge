@@ -1,3 +1,5 @@
+use std::vec::Vec;
+
 #[deriving(Show, PartialOrd, PartialEq, Ord, Eq)]
 pub enum Action {
     PushChar(char),
@@ -13,6 +15,7 @@ pub enum Action {
     Multiply,
     Pop,
     Swap,
+    Jump(Vec<uint>),
     If(uint, uint),
     Compare(uint, uint, uint),
     End,
@@ -34,6 +37,18 @@ impl Action {
             &Multiply => writer.write_line("        self.multiply();"),
             &Pop => writer.write_line("        self.stack.pop();"),
             &Swap => writer.write_line("        self.swap();"),
+
+            &Jump(ref v) => {
+                writer.write_line("        match self.stack.pop() {");
+                writer.write_line(format!("            Some(n) => match modulus(n, {}) {{", v.len()).as_slice());
+                for n in range(0, v.len()) {
+                    writer.write_line(format!("                {} => self.state{}(),", n, v[n]).as_slice());
+                }
+                writer.write_line("                _ => ()");
+                writer.write_line("            },");
+                writer.write_line(format!("            None => self.state{}()", v[0]).as_slice());
+                writer.write_line("        }")
+            },
 
             &If(t, f) => {
                 writer.write_line("        match self.stack.pop() {");

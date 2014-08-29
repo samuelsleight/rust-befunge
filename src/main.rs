@@ -88,6 +88,16 @@ impl Program {
         }
 
         writer.write_line("");
+
+        if self.used_actions.contains(&action::Jump(Vec::new())) {
+            writer.write_line("fn modulus(mut a: int, b: int) -> int {");
+            writer.write_line("    while a < 0 {");
+            writer.write_line("        a += b");
+            writer.write_line("    }");
+            writer.write_line("    a % b");
+            writer.write_line("}\n");
+        }
+
         writer.write_line("struct Program {");
         writer.write_line("    stack: Vec<int>,");
 
@@ -256,6 +266,30 @@ impl Program {
                             ip.advance(width, height);
                             actions.get_mut(state).push(action::PushChar(self.code[ip.y as uint][ip.x as uint]));
                             self.used_actions.insert(action::PushChar(' '));
+                        },
+
+                        'j' => {
+                            let mut new_ip = ip.clone();
+                            let mut jump_vec = Vec::new();
+
+                            loop {
+                                new_ip.advance(width, height);
+
+                                let new_state = *normal_states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
+                                if new_state == next_state {
+                                    ip_queue.push(new_ip);
+                                    next_state += 1;
+                                }
+                                jump_vec.push(new_state);
+
+                                if new_ip == ip {
+                                    break
+                                }
+                            };
+
+                            actions.get_mut(state).push(action::Jump(jump_vec));
+                            self.used_actions.insert(action::Jump(Vec::new()));
+                            break
                         },
 
                         c @ '_' | c @ '|' => {
