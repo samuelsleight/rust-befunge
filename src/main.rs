@@ -1,6 +1,6 @@
 use std::os;
 use std::vec::Vec;
-use std::collections::HashMap;
+use std::collections::{HashMap, TreeSet};
 use std::io::{BufferedReader, File};
 use std::io::stdio::stdout;
 
@@ -10,101 +10,6 @@ use action::Action;
 mod ip;
 mod action;
 
-fn write_first<W: Writer>(writer: &mut W) {
-    writer.write_line("use std::char;
-use std::vec::Vec;
-use std::io::{LineBufferedWriter, BufferedReader};
-use std::io::stdio::{StdWriter, stdout, StdReader, stdin};
-
-struct Program {
-    stack: Vec<int>,
-    output: LineBufferedWriter<StdWriter>,
-    input: BufferedReader<StdReader>
-}
-
-impl Program {
-    fn run() {
-        let mut p = Program { 
-            stack: Vec::new(),
-            output: stdout(),
-            input: stdin(),
-        };
-        
-        p.state0();
-    }
-
-    fn duplicate(&mut self) {
-        match self.stack.pop() {
-            Some(c) => {
-                self.stack.push(c);
-                self.stack.push(c);
-            },
-            None => ()
-        };
-    }
-
-    fn add(&mut self) {
-        match (self.stack.pop(), self.stack.pop()) {
-                (Some(a), Some(b)) => self.stack.push(a + b),
-                (Some(a), None) | (None, Some(a)) => self.stack.push(a),
-                (None, None) => self.stack.push(0)
-        };
-    }
-
-    fn subtract(&mut self) {
-        match (self.stack.pop(), self.stack.pop()) {
-                (Some(a), Some(b)) => self.stack.push(b - a),
-                (Some(a), None) => self.stack.push(-a),
-                (None, Some(a)) => self.stack.push(a),
-                (None, None) => self.stack.push(0)
-        };
-    }
-
-    fn multiply(&mut self) {
-        match (self.stack.pop(), self.stack.pop()) {
-            (Some(a), Some(b)) => self.stack.push(a * b),
-            (_, None) | (None, _) => self.stack.push(0)
-        };
-    }
-
-    fn swap(&mut self) {
-        match (self.stack.pop(), self.stack.pop()) {
-            (Some(a), Some(b)) => {
-                self.stack.push(a);
-                self.stack.push(b);
-            },
-
-            (Some(a), None) => self.stack.push(a),
-
-            (None, Some(a)) => {
-                self.stack.push(0);
-                self.stack.push(a);
-            },
-
-            _ => self.stack.push(0)
-        }
-    }
-
-    fn output_char(&mut self) {
-        match self.stack.pop() {
-            Some(c) if char::from_u32(c as u32).is_some() => self.output.write_char(char::from_u32(c as u32).unwrap()),
-            _ => self.output.write_char(0 as char)
-        };
-
-        self.output.flush();
-    }
-
-    fn output_number(&mut self) {
-        match self.stack.pop() {
-            Some(n) => self.output.write_int(n),
-            None => self.output.write_int(0)
-        };
-    }
-    
-    fn input_char(&mut self) {
-        self.stack.push(self.input.read_char().unwrap() as int);
-    }");
-}
 
 fn write_end<W: Writer>(writer: &mut W) {
     writer.write_line("}
@@ -117,6 +22,7 @@ fn main() {
 #[deriving(Show)]
 struct Program {
     code: Vec<Vec<char>>,
+    used_actions: TreeSet<Action>
 }
 
 fn print_usage() {
@@ -158,7 +64,71 @@ impl Program {
         }
 
         Program {
-            code: grid
+            code: grid,
+            used_actions: TreeSet::new()
+        }
+    }
+
+    fn write_first<W: Writer>(&self, writer: &mut W) {
+        writer.write_line("use std::char;");
+        writer.write_line("use std::vec::Vec;");
+
+        if self.used_actions.contains(&action::OutputChar) || self.used_actions.contains(&action::OutputNumber) {
+            writer.write_line("use std::io::LineBufferedWriter;");
+            writer.write_line("use std::io::stdio::{StdWriter, stdout};");
+        }
+
+        if self.used_actions.contains(&action::InputChar) || self.used_actions.contains(&action::InputNumber) {
+            writer.write_line("use std::io::BufferedReader;");
+            writer.write_line("use std::io::stdio::{StdReader, stdin};");
+        }
+
+        if self.used_actions.contains(&action::TableGet) || self.used_actions.contains(&action::TablePut) {
+            writer.write_line("use std::collections::HashMap;");
+        }
+
+        writer.write_line("");
+        writer.write_line("struct Program {");
+        writer.write_line("    stack: Vec<int>,");
+
+        if self.used_actions.contains(&action::OutputChar) || self.used_actions.contains(&action::OutputNumber) {
+            writer.write_line("    output: LineBufferedWriter<StdWriter>,");
+        }
+
+        if self.used_actions.contains(&action::InputChar) || self.used_actions.contains(&action::InputNumber) {
+            writer.write_line("    input: BufferedReader<StdReader>,");
+        }
+    
+        if self.used_actions.contains(&action::TableGet) || self.used_actions.contains(&action::TablePut) {
+            writer.write_line("    table: HashMap<(int, int), int>,");
+        }
+
+        writer.write_line("}\n");
+
+        writer.write_line("impl Program {");
+        writer.write_line("    fn run() {");
+        writer.write_line("        let mut p = Program {");
+        writer.write_line("            stack: Vec::new(),");
+
+        if self.used_actions.contains(&action::OutputChar) || self.used_actions.contains(&action::OutputNumber) {
+            writer.write_line("            output: stdout(),");
+        }
+
+        if self.used_actions.contains(&action::InputChar) || self.used_actions.contains(&action::InputNumber) {
+            writer.write_line("            input: stdin(),");
+        }
+
+        if self.used_actions.contains(&action::TableGet) || self.used_actions.contains(&action::TablePut) {
+            writer.write_line("            table: HashMap::new(),");
+        }
+
+        writer.write_line("        };");
+        writer.write_line("");
+        writer.write_line("        p.state0();");
+        writer.write_line("    }");
+
+        for act in self.used_actions.iter() {
+            act.write_impl_to(writer);
         }
     }
 
@@ -203,7 +173,10 @@ impl Program {
 
                     match self.code[ip.y as uint][ip.x as uint] {
                         '"' => stringmode = false,
-                        c => actions.get_mut(state).push(action::PushChar(c))
+                        c => { 
+                            actions.get_mut(state).push(action::PushChar(c));
+                            self.used_actions.insert(action::PushChar(' '));
+                        }
                     }
                 } else {
                     normal_states.get_mut(ip.y as uint).get_mut(ip.x as uint).find_or_insert(ip.delta(), state);
@@ -218,22 +191,71 @@ impl Program {
                         'r' => ip.flip(),
                         '#' => ip.advance(width, height),
                         '"' => stringmode = true,
-                        c @ '0'..'9' => actions.get_mut(state).push(action::PushNumber(c.to_digit(10).unwrap() as int)),
-                        c @ 'a'..'f' => actions.get_mut(state).push(action::PushNumber(c.to_digit(16).unwrap() as int)),
-                        '~' => actions.get_mut(state).push(action::InputChar),
-                        ',' => actions.get_mut(state).push(action::OutputChar),
-                        '.' => actions.get_mut(state).push(action::OutputNumber),
-                        '+' => actions.get_mut(state).push(action::Add),
-                        '*' => actions.get_mut(state).push(action::Multiply),
-                        '-' => actions.get_mut(state).push(action::Subtract),
-                        '/' => actions.get_mut(state).push(action::Divide),
-                        ':' => actions.get_mut(state).push(action::Duplicate),
-                        '$' => actions.get_mut(state).push(action::Pop),
-                        '\\' => actions.get_mut(state).push(action::Swap),
+
+                        c @ '0'..'9' => { 
+                            actions.get_mut(state).push(action::PushNumber(c.to_digit(10).unwrap() as int));
+                            self.used_actions.insert(action::PushNumber(0));
+                        },
+
+                        c @ 'a'..'f' => {
+                            actions.get_mut(state).push(action::PushNumber(c.to_digit(16).unwrap() as int));
+                            self.used_actions.insert(action::PushNumber(0));
+                        },
+
+                        '~' => {
+                            actions.get_mut(state).push(action::InputChar);
+                            self.used_actions.insert(action::InputChar);
+                        },
+
+                        ',' => {
+                            actions.get_mut(state).push(action::OutputChar);
+                            self.used_actions.insert(action::OutputChar);
+                        },
+
+                        '.' => {
+                            actions.get_mut(state).push(action::OutputNumber);
+                            self.used_actions.insert(action::OutputNumber);
+                        },
+
+                        '+' => {
+                            actions.get_mut(state).push(action::Add);
+                            self.used_actions.insert(action::Add);
+                        },
+
+                        '*' => {
+                            actions.get_mut(state).push(action::Multiply);
+                            self.used_actions.insert(action::Multiply);
+                        },
+
+                        '-' => {
+                            actions.get_mut(state).push(action::Subtract);
+                            self.used_actions.insert(action::Subtract);
+                        },
+
+                        '/' => {
+                            actions.get_mut(state).push(action::Divide);
+                            self.used_actions.insert(action::Divide);
+                        },
+
+                        ':' => {
+                            actions.get_mut(state).push(action::Duplicate);
+                            self.used_actions.insert(action::Duplicate);
+                        },
+
+                        '$' => {
+                            actions.get_mut(state).push(action::Pop);
+                            self.used_actions.insert(action::Pop);
+                        },
+
+                        '\\' => {
+                            actions.get_mut(state).push(action::Swap);
+                            self.used_actions.insert(action::Swap);
+                        },
 
                         '\'' => {
                             ip.advance(width, height);
                             actions.get_mut(state).push(action::PushChar(self.code[ip.y as uint][ip.x as uint]));
+                            self.used_actions.insert(action::PushChar(' '));
                         },
 
                         c @ '_' | c @ '|' => {
@@ -253,6 +275,7 @@ impl Program {
                             }
 
                             actions.get_mut(state).push(action::If(true_state, false_state));
+                            self.used_actions.insert(action::If(0, 0));
                             break
                         },
 
@@ -280,12 +303,24 @@ impl Program {
                             }
 
                             actions.get_mut(state).push(action::Compare(s_state, l_state, r_state));
+                            self.used_actions.insert(action::Compare(0, 0, 0));
                             break
                         },
 
                         '@' => {
                             actions.get_mut(state).push(action::End);
+                            self.used_actions.insert(action::End);
                             break
+                        },
+
+                        'p' => {
+                            actions.get_mut(state).push(action::TablePut);
+                            self.used_actions.insert(action::TablePut);
+                        },
+
+                        'g' => {
+                            actions.get_mut(state).push(action::TableGet);
+                            self.used_actions.insert(action::TableGet);
                         },
 
                         _ => (),
@@ -299,7 +334,7 @@ impl Program {
         }
 
         let mut writer = stdout();
-        write_first(&mut writer);
+        self.write_first(&mut writer);
         state = 0;
         for v in actions.iter() {
             writer.write_line(format!("\n    fn state{}(&mut self) {{", state).as_slice());
@@ -325,5 +360,3 @@ fn main() {
         prog.parse();
     }
 }
-
-
