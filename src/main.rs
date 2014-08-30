@@ -10,7 +10,6 @@ use action::Action;
 mod ip;
 mod action;
 
-
 fn write_end<W: Writer>(writer: &mut W) {
     writer.write_line("}
 
@@ -218,23 +217,111 @@ impl Program {
                         },
 
                         '+' => {
-                            actions.get_mut(state).push(action::Add);
-                            self.used_actions.insert(action::Add);
+                            match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
+                                (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(a + b)),
+                                (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
+                              | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions.get_mut(state).push(action::PushNumber(n + (c as int))),
+                                (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(a as int + b as int)),
+
+                                (Some(a), Some(b)) => {
+                                    actions.get_mut(state).push(b);
+                                    actions.get_mut(state).push(a);
+                                    actions.get_mut(state).push(action::Add);
+                                    self.used_actions.insert(action::Add);
+                                },
+
+                                (None, Some(a)) | (Some(a), None) => {
+                                    actions.get_mut(state).push(a);
+                                    actions.get_mut(state).push(action::Add);
+                                    self.used_actions.insert(action::Add);
+                                },
+
+                                (None, None) => {
+                                    actions.get_mut(state).push(action::Add);
+                                    self.used_actions.insert(action::Add);
+                                },
+                            }
                         },
 
                         '*' => {
-                            actions.get_mut(state).push(action::Multiply);
-                            self.used_actions.insert(action::Multiply);
+                            match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
+                                (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(a * b)),
+                                (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
+                              | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions.get_mut(state).push(action::PushNumber(n * (c as int))),
+                                (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(a as int * b as int)),
+
+                                (Some(a), Some(b)) => {
+                                    actions.get_mut(state).push(b);
+                                    actions.get_mut(state).push(a);
+                                    actions.get_mut(state).push(action::Multiply);
+                                    self.used_actions.insert(action::Multiply);
+                                },
+
+                                (None, Some(a)) | (Some(a), None) => {
+                                    actions.get_mut(state).push(a);
+                                    actions.get_mut(state).push(action::Multiply);
+                                    self.used_actions.insert(action::Multiply);
+                                },
+
+                                (None, None) => {
+                                    actions.get_mut(state).push(action::Multiply);
+                                    self.used_actions.insert(action::Multiply);
+                                },
+                            }
                         },
 
                         '-' => {
-                            actions.get_mut(state).push(action::Subtract);
-                            self.used_actions.insert(action::Subtract);
+                            match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
+                                (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b - a)),
+                                (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b - (a as int))),
+                                (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber((b as int) - a)),
+                                (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(b as int - a as int)),
+
+                                (Some(a), Some(b)) => {
+                                    actions.get_mut(state).push(b);
+                                    actions.get_mut(state).push(a);
+                                    actions.get_mut(state).push(action::Subtract);
+                                    self.used_actions.insert(action::Subtract);
+                                },
+
+                                (None, Some(a)) | (Some(a), None) => {
+                                    actions.get_mut(state).push(a);
+                                    actions.get_mut(state).push(action::Subtract);
+                                    self.used_actions.insert(action::Subtract);
+                                },
+
+                                (None, None) => {
+                                    actions.get_mut(state).push(action::Subtract);
+                                    self.used_actions.insert(action::Subtract);
+                                },
+                            }
                         },
 
                         '/' => {
-                            actions.get_mut(state).push(action::Divide);
-                            self.used_actions.insert(action::Divide);
+                            match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
+                                (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b / a)),
+                                (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b / (a as int))),
+                                (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber((b as int) / a)),
+                                (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(b as int / a as int)),
+
+                                (Some(a), Some(b)) => {
+                                    actions.get_mut(state).push(b);
+                                    actions.get_mut(state).push(a);
+                                    actions.get_mut(state).push(action::Divide);
+                                    self.used_actions.insert(action::Divide);
+                                },
+
+                                (None, Some(a)) | (Some(a), None) => {
+                                    actions.get_mut(state).push(a);
+                                    actions.get_mut(state).push(action::Divide);
+                                    self.used_actions.insert(action::Divide);
+                                },
+
+                                (None, None) => {
+                                    actions.get_mut(state).push(action::Divide);
+                                    self.used_actions.insert(action::Divide);
+                                },
+                            }
                         },
 
                         ':' => {

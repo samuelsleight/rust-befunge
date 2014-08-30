@@ -35,6 +35,7 @@ impl Action {
             &Add => writer.write_line("        self.add();"),
             &Subtract => writer.write_line("        self.subtract();"),
             &Multiply => writer.write_line("        self.multiply();"),
+            &Divide => writer.write_line("        self.divide();"),
             &Pop => writer.write_line("        self.stack.pop();"),
             &Swap => writer.write_line("        self.swap();"),
 
@@ -121,6 +122,18 @@ impl Action {
                 writer.write_line("        match (self.stack.pop(), self.stack.pop()) {");
                 writer.write_line("            (Some(a), Some(b)) => self.stack.push(a * b),");
                 writer.write_line("            (_, None) | (None, _) => self.stack.push(0)");
+                writer.write_line("        };");
+                writer.write_line("    }");
+            },
+
+            &Divide => {
+                writer.write_line("");
+                writer.write_line("    fn divide(&mut self) {");
+                writer.write_line("        match (self.stack.pop(), self.stack.pop()) {");
+                writer.write_line("            (Some(a), Some(b)) => self.stack.push(b / a),");
+                writer.write_line("            (Some(a), None) => self.stack.push(0 / a),");
+                writer.write_line("            (None, Some(a)) => self.stack.push(a / 0),");
+                writer.write_line("            (None, None) => self.stack.push(0 / 0)");
                 writer.write_line("        };");
                 writer.write_line("    }");
             },
