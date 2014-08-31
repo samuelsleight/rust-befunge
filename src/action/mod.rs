@@ -18,6 +18,7 @@ pub enum Action {
     Jump(Vec<uint>),
     If(uint, uint),
     Compare(uint, uint, uint),
+    Clear,
     End,
     TablePut,
     TableGet
@@ -67,6 +68,8 @@ impl Action {
                 writer.write_line(format!("            (_, None) => self.state{}()", r).as_slice());
                 writer.write_line("        }")
             },
+
+            &Clear => writer.write_line("        self.stack.clear();"),
 
             &End => writer.write_line("        ()"),
 
