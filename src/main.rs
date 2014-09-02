@@ -20,18 +20,25 @@ pub enum ParserResult<T> {
 }
 
 impl<T> ParserResult<T> {
-    fn map<R>(&self, f: |&T| -> ParserResult<R>) -> ParserResult<R> {
+    fn then<R>(&self, f: |&T| -> ParserResult<R>) -> ParserResult<R> {
         match self {
             &Ok(ref t) => f(t),
-            &Err(ref e) => exit(e)
+            &Err(ref e) => Err(e.clone())
+        }
+    }
+
+    fn finally<R>(&self, f: |&T| -> R) {
+        match self {
+            &Ok(ref t) => { f(t); },
+            &Err(ref e) => exit(e.clone())
         }
     }
 }
 
 fn parse(filename: &String) {
     read_file(filename)
-        .map(parse_code)
-        .map(write_output);
+        .then(parse_code)
+        .finally(write_output);
 }
 
 
@@ -70,7 +77,11 @@ fn read_file(filename: &String) -> ParserResult<Vec<Vec<char>>> {
             }
         }
 
-        Ok(grid)
+        if grid.is_empty() {
+            Err(error::FileEmptyError(filename.clone()))
+        } else {
+            Ok(grid)
+        }
     } else {
         Err(error::FileReadError(filename.clone()))
     }
@@ -471,7 +482,7 @@ fn main() {
 }");
 }
 
-fn write_output(&(ref actions, ref used_actions): &(Vec<Vec<action::Action>>, TreeSet<action::Action>)) -> ParserResult<()> {
+fn write_output(&(ref actions, ref used_actions): &(Vec<Vec<action::Action>>, TreeSet<action::Action>)) {
     let mut writer = stdout();
 
     write_first(&mut writer, used_actions);
@@ -490,12 +501,11 @@ fn write_output(&(ref actions, ref used_actions): &(Vec<Vec<action::Action>>, Tr
     }
 
     write_end(&mut writer);
-
-    Ok(())
 }
 
-fn exit(err: &ParserError) -> ! {
-    fail!("{}", err);
+fn exit(err: ParserError) {
+    let mut out = stderr();
+    write!(out, "Error: {}\n", err);
 }
 
 fn print_usage() {
