@@ -1,8 +1,7 @@
 use std::os;
-use std::result;
 use std::vec::Vec;
 use std::collections::{HashMap, TreeSet};
-use std::io::{BufferedReader, File};
+use std::io::{BufferedReader, File, IoError};
 use std::io::stdio::{stdout, stderr};
 
 use ip::IP;
@@ -13,36 +12,14 @@ mod ip;
 mod action;
 mod error;
 
-#[deriving(Copy, Clone)]
-pub enum ParserResult<T> {
-    Ok(T),
-    Err(ParserError)
-}
-
-impl<T> ParserResult<T> {
-    fn then<R>(&self, f: |&T| -> ParserResult<R>) -> ParserResult<R> {
-        match self {
-            &Ok(ref t) => f(t),
-            &Err(ref e) => Err(e.clone())
-        }
-    }
-
-    fn finally<R>(&self, f: |&T| -> R) {
-        match self {
-            &Ok(ref t) => { f(t); },
-            &Err(ref e) => exit(e.clone())
-        }
-    }
-}
-
-fn parse(filename: &String) {
+fn parse(filename: &String) -> Result<(), ParserError> {
     read_file(filename)
-        .then(parse_code)
-        .finally(write_output);
+        .and_then(parse_code)
+        .and_then(write_output)
 }
 
 
-fn read_file(filename: &String) -> ParserResult<Vec<Vec<char>>> {
+fn read_file(filename: &String) -> Result<Vec<Vec<char>>, ParserError> {
     let file = File::open(&Path::new(filename.as_slice()));
 
     if file.is_ok() {
@@ -55,15 +32,15 @@ fn read_file(filename: &String) -> ParserResult<Vec<Vec<char>>> {
 
         loop {
             match reader.read_char() {
-                result::Ok('\n') => {
+                Ok('\n') => {
                     if grid.last().unwrap().len() > max_len {
                         max_len = grid.last().unwrap().len()
                     }
                     grid.push(Vec::new())
                 },
 
-                result::Ok(c) => grid.mut_last().unwrap().push(c),
-                result::Err(_) => break
+                Ok(c) => grid.mut_last().unwrap().push(c),
+                Err(_) => break
             }
         }
 
@@ -87,7 +64,7 @@ fn read_file(filename: &String) -> ParserResult<Vec<Vec<char>>> {
     }
 }
 
-fn parse_code(code: &Vec<Vec<char>>) -> ParserResult<(Vec<Vec<action::Action>>, TreeSet<action::Action>)> {
+fn parse_code(code: Vec<Vec<char>>) -> Result<(Vec<Vec<action::Action>>, TreeSet<action::Action>), ParserError> {
     let mut ip_queue = vec![IP::new(0, 0, 1, 0)];
 
     let width = code[0].len();
@@ -401,111 +378,107 @@ fn parse_code(code: &Vec<Vec<char>>) -> ParserResult<(Vec<Vec<action::Action>>, 
     Ok((actions, used_actions))
 }
 
-fn write_first<W: Writer>(writer: &mut W, used_actions: &TreeSet<action::Action>) {
-    writer.write_line("use std::char;");
-    writer.write_line("use std::vec::Vec;");
+fn write_first<W: Writer>(writer: &mut W, used_actions: &TreeSet<action::Action>) -> Result<(), IoError> {
+    writer.write_line("use std::char;")
+    .and_then(|_| writer.write_line("use std::vec::Vec;"))
 
-    if used_actions.contains(&action::OutputChar) || used_actions.contains(&action::OutputNumber) {
-        writer.write_line("use std::io::LineBufferedWriter;");
-        writer.write_line("use std::io::stdio::{StdWriter, stdout};");
-    }
+    .and_then(|_| if used_actions.contains(&action::OutputChar) || used_actions.contains(&action::OutputNumber) {
+        writer.write_line("use std::io::LineBufferedWriter;")
+        .and_then(|_| writer.write_line("use std::io::stdio::{StdWriter, stdout};"))
+    } else { Ok(()) })
 
-    if used_actions.contains(&action::InputChar) || used_actions.contains(&action::InputNumber) {
-        writer.write_line("use std::io::BufferedReader;");
-        writer.write_line("use std::io::stdio::{StdReader, stdin};");
-    }
+    .and_then(|_| if used_actions.contains(&action::InputChar) || used_actions.contains(&action::InputNumber) {
+        writer.write_line("use std::io::BufferedReader;")
+        .and_then(|_| writer.write_line("use std::io::stdio::{StdReader, stdin};"))
+    } else { Ok(()) })
 
-    if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
-        writer.write_line("use std::collections::HashMap;");
-    }
+    .and_then(|_| if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
+        writer.write_line("use std::collections::HashMap;")
+    } else { Ok(()) })
 
-    writer.write_line("");
+    .and_then(|_| writer.write_line(""))
 
-    if used_actions.contains(&action::Jump(Vec::new())) {
-        writer.write_line("fn modulus(mut a: int, b: int) -> int {");
-        writer.write_line("    while a < 0 {");
-        writer.write_line("        a += b");
-        writer.write_line("    }");
-        writer.write_line("    a % b");
-        writer.write_line("}\n");
-    }
+    .and_then(|_| if used_actions.contains(&action::Jump(Vec::new())) {
+        writer.write_line("fn modulus(mut a: int, b: int) -> int {")
+        .and_then(|_| writer.write_line("    while a < 0 {"))
+        .and_then(|_| writer.write_line("        a += b"))
+        .and_then(|_| writer.write_line("    }"))
+        .and_then(|_| writer.write_line("    a % b"))
+        .and_then(|_| writer.write_line("}\n"))
+    } else { Ok(()) })
 
-    writer.write_line("struct Program {");
-    writer.write_line("    stack: Vec<int>,");
+    .and_then(|_| writer.write_line("struct Program {"))
+    .and_then(|_| writer.write_line("    stack: Vec<int>,"))
 
-    if used_actions.contains(&action::OutputChar) || used_actions.contains(&action::OutputNumber) {
-        writer.write_line("    output: LineBufferedWriter<StdWriter>,");
-    }
+    .and_then(|_| if used_actions.contains(&action::OutputChar) || used_actions.contains(&action::OutputNumber) {
+        writer.write_line("    output: LineBufferedWriter<StdWriter>,")
+    } else { Ok(()) })
 
-    if used_actions.contains(&action::InputChar) || used_actions.contains(&action::InputNumber) {
-        writer.write_line("    input: BufferedReader<StdReader>,");
-    }
+    .and_then(|_| if used_actions.contains(&action::InputChar) || used_actions.contains(&action::InputNumber) {
+        writer.write_line("    input: BufferedReader<StdReader>,")
+    } else { Ok(()) })
 
-    if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
-        writer.write_line("    table: HashMap<(int, int), int>,");
-    }
+    .and_then(|_| if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
+        writer.write_line("    table: HashMap<(int, int), int>,")
+    } else { Ok(()) })
 
-    writer.write_line("}\n");
+    .and_then(|_| writer.write_line("}\n"))
 
-    writer.write_line("impl Program {");
-    writer.write_line("    fn run() {");
-    writer.write_line("        let mut p = Program {");
-    writer.write_line("            stack: Vec::new(),");
+    .and_then(|_| writer.write_line("impl Program {"))
+    .and_then(|_| writer.write_line("    fn run() {"))
+    .and_then(|_| writer.write_line("        let mut p = Program {"))
+    .and_then(|_| writer.write_line("            stack: Vec::new(),"))
 
-    if used_actions.contains(&action::OutputChar) || used_actions.contains(&action::OutputNumber) {
-        writer.write_line("            output: stdout(),");
-    }
+    .and_then(|_| if used_actions.contains(&action::OutputChar) || used_actions.contains(&action::OutputNumber) {
+        writer.write_line("            output: stdout(),")
+    } else { Ok(()) })
 
-    if used_actions.contains(&action::InputChar) || used_actions.contains(&action::InputNumber) {
-        writer.write_line("            input: stdin(),");
-    }
+    .and_then(|_| if used_actions.contains(&action::InputChar) || used_actions.contains(&action::InputNumber) {
+        writer.write_line("            input: stdin(),")
+    } else { Ok(()) })
 
-    if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
-        writer.write_line("            table: HashMap::new(),");
-    }
+    .and_then(|_| if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
+        writer.write_line("            table: HashMap::new(),")
+    } else { Ok(()) })
 
-    writer.write_line("        };");
-    writer.write_line("");
-    writer.write_line("        p.state0();");
-    writer.write_line("    }");
+    .and_then(|_| writer.write_line("        };"))
+    .and_then(|_| writer.write_line(""))
+    .and_then(|_| writer.write_line("        p.state0();"))
+    .and_then(|_| writer.write_line("    }"))
 
-    for act in used_actions.iter() {
-        act.write_impl_to(writer);
-    }
+    .and_then(|_| used_actions.iter().fold(Ok(()), |acc, act| acc.and_then(|_| act.write_impl_to(writer))))
 }
 
-fn write_end<W: Writer>(writer: &mut W) {
+fn write_end<W: Writer>(writer: &mut W) -> Result<(), IoError> {
     writer.write_line("}
 
 fn main() {
     Program::run()
-}");
+}")
 }
 
-fn write_output(&(ref actions, ref used_actions): &(Vec<Vec<action::Action>>, TreeSet<action::Action>)) {
+fn write_output((actions, used_actions): (Vec<Vec<action::Action>>, TreeSet<action::Action>)) -> Result<(), ParserError> {
     let mut writer = stdout();
-
-    write_first(&mut writer, used_actions);
-
     let mut state = 0i;
-    for v in actions.iter() {
-        writer.write_line(format!("\n    fn state{}(&mut self) {{", state).as_slice());
 
-        for action in v.iter() {
-            action.write_to(&mut writer);
-        }
+    write_first(&mut writer, &used_actions)
 
-        writer.write_line("    }");
+    .and_then(|_| actions.iter().fold(Ok(()), |acc, vec| acc.and_then(|_| {
+        writer.write_line(format!("\n    fn state{}(&mut self) {{", state).as_slice())
+        .and_then(|_| vec.iter().fold(Ok(()), |acc2, act| acc2.and_then(|_| act.write_to(&mut writer))))
+        .and_then(|_| writer.write_line("    }"))
+        .map(|_| state += 1)
+    })))
 
-        state += 1;
-    }
-
-    write_end(&mut writer);
+    .and_then(|_| write_end(&mut writer))
+    .map_err(|_| error::OutputError)
 }
 
 fn exit(err: ParserError) {
     let mut out = stderr();
-    write!(out, "Error: {}\n", err);
+    if write!(out, "Error: {}\n", err).is_err() {
+        fail!("Error reporting error")
+    }
 }
 
 fn print_usage() {
@@ -519,6 +492,10 @@ fn main() {
         print_usage();
     } else {
         let ref filename = args[1];
-        parse(filename);
+
+        match parse(filename) {
+            Ok(_) => (),
+            Err(e) => exit(e)
+        }
     }
 }
