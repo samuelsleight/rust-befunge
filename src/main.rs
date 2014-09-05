@@ -12,6 +12,9 @@ mod ip;
 mod action;
 mod error;
 
+#[cfg(test)]
+mod test;
+
 struct Parser {
     vars_enabled: bool,
     output_file: Option<String>
