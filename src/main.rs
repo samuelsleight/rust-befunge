@@ -13,13 +13,15 @@ mod action;
 mod error;
 
 struct Parser {
-    vars_enabled: bool
+    vars_enabled: bool,
+    output_file: Option<String>
 }
 
 impl Parser {
-    fn new(vars: bool) -> Parser {
+    fn new(vars: bool, output: Option<String>) -> Parser {
         Parser {
-            vars_enabled: vars
+            vars_enabled: vars,
+            output_file: output
         }
     }
 
@@ -28,7 +30,6 @@ impl Parser {
             .and_then(|a| self.parse_code(a))
             .and_then(|a| self.write_output(a))
     }
-
 
     fn read_file(&self, filename: &String) -> Result<Vec<Vec<char>>, ParserError> {
         let file = File::open(&Path::new(filename.as_slice()));
@@ -477,20 +478,39 @@ fn main() {
     }
 
     fn write_output(&self, (actions, used_actions): (Vec<Vec<action::Action>>, TreeSet<action::Action>)) -> Result<(), ParserError> {
-        let mut writer = stdout();
         let mut state = 0i;
 
-        self.write_first(&mut writer, &used_actions)
+        match self.output_file {
+            Some(ref f) => {
+                let mut writer = File::create(&Path::new(f.clone()));
+                self.write_first(&mut writer, &used_actions)
 
-        .and_then(|_| actions.iter().fold(Ok(()), |acc, vec| acc.and_then(|_| {
-            writer.write_line(format!("\n    fn state{}(&mut self) {{", state).as_slice())
-            .and_then(|_| vec.iter().fold(Ok(()), |acc2, act| acc2.and_then(|_| act.write_to(&mut writer))))
-            .and_then(|_| writer.write_line("    }"))
-            .map(|_| state += 1)
-        })))
+                .and_then(|_| actions.iter().fold(Ok(()), |acc, vec| acc.and_then(|_| {
+                    writer.write_line(format!("\n    fn state{}(&mut self) {{", state).as_slice())
+                    .and_then(|_| vec.iter().fold(Ok(()), |acc2, act| acc2.and_then(|_| act.write_to(&mut writer))))
+                    .and_then(|_| writer.write_line("    }"))
+                    .map(|_| state += 1)
+                })))
 
-        .and_then(|_| self.write_end(&mut writer))
-        .map_err(|_| error::OutputError)
+                .and_then(|_| self.write_end(&mut writer))
+                .map_err(|_| error::OutputError)
+            },
+                
+            None => {
+                let mut writer = stdout(); 
+                self.write_first(&mut writer, &used_actions)
+
+                .and_then(|_| actions.iter().fold(Ok(()), |acc, vec| acc.and_then(|_| {
+                    writer.write_line(format!("\n    fn state{}(&mut self) {{", state).as_slice())
+                    .and_then(|_| vec.iter().fold(Ok(()), |acc2, act| acc2.and_then(|_| act.write_to(&mut writer))))
+                    .and_then(|_| writer.write_line("    }"))
+                    .map(|_| state += 1)
+                })))
+
+                .and_then(|_| self.write_end(&mut writer))
+                .map_err(|_| error::OutputError)
+            }
+        }
     }
 }
 
@@ -511,6 +531,7 @@ fn main() {
     let mut help = false;
     let mut vars = false;
     let mut filename = None;
+    let mut output = None;
 
     let mut i = 1u;
     loop {
@@ -522,6 +543,11 @@ fn main() {
             "-h" | "--help" => {
                 help = true;
                 break
+            },
+
+            "-o" | "--output" => {
+                output = Some(args[i + 1].clone());
+                i += 1
             },
 
             "--enable-vars" => vars = true,
@@ -536,7 +562,7 @@ fn main() {
         return print_usage()
     }
 
-    let parser = Parser::new(vars);
+    let parser = Parser::new(vars, output);
 
     match parser.parse(&filename.unwrap()) {
         Err(e) => exit(e),

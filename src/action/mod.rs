@@ -1,7 +1,7 @@
 use std::vec::Vec;
 use std::io::IoError;
 
-#[deriving(Show, PartialOrd, PartialEq, Ord, Eq)]
+#[deriving(Show, PartialOrd, PartialEq, Ord, Eq, Clone)]
 pub enum Action {
     PushChar(char),
     PushNumber(int),

@@ -8,6 +8,7 @@ pub enum ParserError {
     UnexpectedChar(int, int, char),
     VarsDisabled,
     OutputError,
+    OutputFileError(String)
 }
 
 impl Show for ParserError {
@@ -24,7 +25,8 @@ impl Show for ParserError {
                 write!(f, "Disabled by default as it potentially allows invalid code.")
             }
 
-            &OutputError => write!(f, "Unable to write output")
+            &OutputError => write!(f, "Unable to write output"),
+            &OutputFileError(ref file) => write!(f, "Unable to open output file for writing: {}", file)
         }
     }
 }
