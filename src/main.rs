@@ -17,13 +17,15 @@ mod test;
 
 struct Parser {
     vars_enabled: bool,
+    opt_eval: bool,
     output_file: Option<String>
 }
 
 impl Parser {
-    fn new(vars: bool, output: Option<String>) -> Parser {
+    fn new(vars: bool, eval: bool, output: Option<String>) -> Parser {
         Parser {
             vars_enabled: vars,
+            opt_eval: eval,
             output_file: output
         }
     }
@@ -156,110 +158,130 @@ impl Parser {
                         },
 
                         '+' => {
-                            match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
-                                (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(a + b)),
-                                (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
-                              | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions.get_mut(state).push(action::PushNumber(n + (c as int))),
-                                (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(a as int + b as int)),
+                            if self.opt_eval {
+                                match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
+                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(a + b)),
+                                    (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
+                                  | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions.get_mut(state).push(action::PushNumber(n + (c as int))),
+                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(a as int + b as int)),
 
-                                (Some(a), Some(b)) => {
-                                    actions.get_mut(state).push(b);
-                                    actions.get_mut(state).push(a);
-                                    actions.get_mut(state).push(action::Add);
-                                    used_actions.insert(action::Add);
-                                },
+                                    (Some(a), Some(b)) => {
+                                        actions.get_mut(state).push(b);
+                                        actions.get_mut(state).push(a);
+                                        actions.get_mut(state).push(action::Add);
+                                        used_actions.insert(action::Add);
+                                    },
 
-                                (None, Some(a)) | (Some(a), None) => {
-                                    actions.get_mut(state).push(a);
-                                    actions.get_mut(state).push(action::Add);
-                                    used_actions.insert(action::Add);
-                                },
+                                    (None, Some(a)) | (Some(a), None) => {
+                                        actions.get_mut(state).push(a);
+                                        actions.get_mut(state).push(action::Add);
+                                        used_actions.insert(action::Add);
+                                    },
 
-                                (None, None) => {
-                                    actions.get_mut(state).push(action::Add);
-                                    used_actions.insert(action::Add);
-                                },
+                                    (None, None) => {
+                                        actions.get_mut(state).push(action::Add);
+                                        used_actions.insert(action::Add);
+                                    },
+                                }
+                            } else {
+                                actions.get_mut(state).push(action::Add);
+                                used_actions.insert(action::Add);
                             }
                         },
 
                         '*' => {
-                            match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
-                                (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(a * b)),
-                                (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
-                              | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions.get_mut(state).push(action::PushNumber(n * (c as int))),
-                                (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(a as int * b as int)),
+                            if self.opt_eval {
+                                match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
+                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(a * b)),
+                                    (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
+                                  | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions.get_mut(state).push(action::PushNumber(n * (c as int))),
+                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(a as int * b as int)),
 
-                                (Some(a), Some(b)) => {
-                                    actions.get_mut(state).push(b);
-                                    actions.get_mut(state).push(a);
-                                    actions.get_mut(state).push(action::Multiply);
-                                    used_actions.insert(action::Multiply);
-                                },
+                                    (Some(a), Some(b)) => {
+                                        actions.get_mut(state).push(b);
+                                        actions.get_mut(state).push(a);
+                                        actions.get_mut(state).push(action::Multiply);
+                                        used_actions.insert(action::Multiply);
+                                    },
 
-                                (None, Some(a)) | (Some(a), None) => {
-                                    actions.get_mut(state).push(a);
-                                    actions.get_mut(state).push(action::Multiply);
-                                    used_actions.insert(action::Multiply);
-                                },
+                                    (None, Some(a)) | (Some(a), None) => {
+                                        actions.get_mut(state).push(a);
+                                        actions.get_mut(state).push(action::Multiply);
+                                        used_actions.insert(action::Multiply);
+                                    },
 
-                                (None, None) => {
-                                    actions.get_mut(state).push(action::Multiply);
-                                    used_actions.insert(action::Multiply);
-                                },
+                                    (None, None) => {
+                                        actions.get_mut(state).push(action::Multiply);
+                                        used_actions.insert(action::Multiply);
+                                    },
+                                }
+                            } else {
+                                actions.get_mut(state).push(action::Multiply);
+                                used_actions.insert(action::Multiply);
                             }
                         },
 
                         '-' => {
-                            match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
-                                (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b - a)),
-                                (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b - (a as int))),
-                                (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber((b as int) - a)),
-                                (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(b as int - a as int)),
+                            if self.opt_eval {
+                                match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
+                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b - a)),
+                                    (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b - (a as int))),
+                                    (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber((b as int) - a)),
+                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(b as int - a as int)),
 
-                                (Some(a), Some(b)) => {
-                                    actions.get_mut(state).push(b);
-                                    actions.get_mut(state).push(a);
-                                    actions.get_mut(state).push(action::Subtract);
-                                    used_actions.insert(action::Subtract);
-                                },
+                                    (Some(a), Some(b)) => {
+                                        actions.get_mut(state).push(b);
+                                        actions.get_mut(state).push(a);
+                                        actions.get_mut(state).push(action::Subtract);
+                                        used_actions.insert(action::Subtract);
+                                    },
 
-                                (None, Some(a)) | (Some(a), None) => {
-                                    actions.get_mut(state).push(a);
-                                    actions.get_mut(state).push(action::Subtract);
-                                    used_actions.insert(action::Subtract);
-                                },
+                                    (None, Some(a)) | (Some(a), None) => {
+                                        actions.get_mut(state).push(a);
+                                        actions.get_mut(state).push(action::Subtract);
+                                        used_actions.insert(action::Subtract);
+                                    },
 
-                                (None, None) => {
-                                    actions.get_mut(state).push(action::Subtract);
-                                    used_actions.insert(action::Subtract);
-                                },
+                                    (None, None) => {
+                                        actions.get_mut(state).push(action::Subtract);
+                                        used_actions.insert(action::Subtract);
+                                    },
+                                }
+                            } else {
+                                actions.get_mut(state).push(action::Subtract);
+                                used_actions.insert(action::Subtract);
                             }
                         },
 
                         '/' => {
-                            match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
-                                (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b / a)),
-                                (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b / (a as int))),
-                                (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber((b as int) / a)),
-                                (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(b as int / a as int)),
+                            if self.opt_eval {
+                                match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
+                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b / a)),
+                                    (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b / (a as int))),
+                                    (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber((b as int) / a)),
+                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(b as int / a as int)),
 
-                                (Some(a), Some(b)) => {
-                                    actions.get_mut(state).push(b);
-                                    actions.get_mut(state).push(a);
-                                    actions.get_mut(state).push(action::Divide);
-                                    used_actions.insert(action::Divide);
-                                },
+                                    (Some(a), Some(b)) => {
+                                        actions.get_mut(state).push(b);
+                                        actions.get_mut(state).push(a);
+                                        actions.get_mut(state).push(action::Divide);
+                                        used_actions.insert(action::Divide);
+                                    },
 
-                                (None, Some(a)) | (Some(a), None) => {
-                                    actions.get_mut(state).push(a);
-                                    actions.get_mut(state).push(action::Divide);
-                                    used_actions.insert(action::Divide);
-                                },
+                                    (None, Some(a)) | (Some(a), None) => {
+                                        actions.get_mut(state).push(a);
+                                        actions.get_mut(state).push(action::Divide);
+                                        used_actions.insert(action::Divide);
+                                    },
 
-                                (None, None) => {
-                                    actions.get_mut(state).push(action::Divide);
-                                    used_actions.insert(action::Divide);
-                                },
+                                    (None, None) => {
+                                        actions.get_mut(state).push(action::Divide);
+                                        used_actions.insert(action::Divide);
+                                    },
+                                }
+                            } else {
+                                actions.get_mut(state).push(action::Divide);
+                                used_actions.insert(action::Divide);
                             }
                         },
 
@@ -525,7 +547,23 @@ fn exit(err: ParserError) {
 }
 
 fn print_usage() {
-    println!("Usage: befunge [options] input")
+    println!("Usage: 
+    ./befunge [options] [input]
+
+Options:
+    -h | --help 
+        Print this message.
+        
+    -o | --output [filename]
+        Output code to given file. If not given, outputs to stdout.
+        
+    --enable-vars
+        Enables using 'p' and 'g' to store and retrieve variables.
+        Disabled by default as this potentially allows invalid befunge.
+
+    --no-eval
+        Disables evaluating constant expressions
+        (ie '22+' into '4')")
 }
 
 fn main() {
@@ -533,6 +571,7 @@ fn main() {
 
     let mut help = false;
     let mut vars = false;
+    let mut eval = true;
     let mut filename = None;
     let mut output = None;
 
@@ -555,6 +594,8 @@ fn main() {
 
             "--enable-vars" => vars = true,
 
+            "--no-eval" => eval = false,
+
             s => filename = Some(s.to_string())
         }
 
@@ -565,7 +606,7 @@ fn main() {
         return print_usage()
     }
 
-    let parser = Parser::new(vars, output);
+    let parser = Parser::new(vars, eval, output);
 
     match parser.parse(&filename.unwrap()) {
         Err(e) => exit(e),

@@ -16,7 +16,7 @@ fn compilation_test(bf: &str, file: &str, expected: &str, vars: bool) {
         }
     }
 
-    let p = Parser::new(vars, Some(rs_filename.to_string()));
+    let p = Parser::new(vars, true, Some(rs_filename.to_string()));
     match p.parse(&bf_filename.to_string()) {
         Err(e) => {
             clean_files(file);
