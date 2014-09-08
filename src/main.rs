@@ -17,14 +17,16 @@ mod test;
 
 struct Parser {
     vars_enabled: bool,
+    exit_on_invalid: bool,
     opt_eval: bool,
     output_file: Option<String>
 }
 
 impl Parser {
-    fn new(vars: bool, eval: bool, output: Option<String>) -> Parser {
+    fn new(vars: bool, inv: bool, eval: bool, output: Option<String>) -> Parser {
         Parser {
             vars_enabled: vars,
+            exit_on_invalid: inv,
             opt_eval: eval,
             output_file: output
         }
@@ -102,6 +104,8 @@ impl Parser {
         let mut next_state = 1u;
 
         loop {
+            stderr().write_line(format!("State: {}", state).as_slice());
+
             if state >= ip_queue.len() {
                 break
             }
@@ -111,6 +115,7 @@ impl Parser {
 
             actions.push(Vec::new());
 
+            let mut first = true;
             loop {
                 if stringmode {
                     match code[ip.y as uint][ip.x as uint] {
@@ -121,6 +126,18 @@ impl Parser {
                         }
                     }
                 } else {
+                    match states.get_mut(ip.y as uint).get_mut(ip.x as uint).find(&ip.delta()) {
+                        Some(s) if !first => {
+                            actions.get_mut(state).push(action::CallState(*s));
+                            used_actions.insert(action::CallState(0));
+                            break
+                        }
+
+                        _ => ()
+                    }
+
+                    first = false;
+
                     match code[ip.y as uint][ip.x as uint] {
                         '>' => ip.right(),
                         '<' => ip.left(),
@@ -410,9 +427,17 @@ impl Parser {
 
                         ' ' => (),
 
-                        c @ _ => return Err(error::UnexpectedChar(ip.x, ip.y, c))
+                        c @ _ => {
+                            if !self.exit_on_invalid {
+                                return Err(error::UnexpectedChar(ip.x, ip.y, c))
+                            } else {
+                                ()
+                            }
+                        }
                     }
                 }
+
+                // stderr().write_line(format!("{}", actions.get_mut(state).last()).as_slice());
 
                 ip.advance(width, height)
             }
@@ -571,6 +596,7 @@ fn main() {
 
     let mut help = false;
     let mut vars = false;
+    let mut inv = false;
     let mut eval = true;
     let mut filename = None;
     let mut output = None;
@@ -592,7 +618,9 @@ fn main() {
                 i += 1
             },
 
-            "--enable-vars" => vars = true,
+            "-e" | "--exit-on-invalid" => inv = true,
+
+            "-v" | "--enable-vars" => vars = true,
 
             "--no-eval" => eval = false,
 
@@ -606,7 +634,7 @@ fn main() {
         return print_usage()
     }
 
-    let parser = Parser::new(vars, eval, output);
+    let parser = Parser::new(vars, inv, eval, output);
 
     match parser.parse(&filename.unwrap()) {
         Err(e) => exit(e),

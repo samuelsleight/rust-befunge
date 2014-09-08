@@ -4,7 +4,7 @@ use std::io::Command;
 use super::Parser;
 
 #[cfg(test)]
-fn compilation_test(bf: &str, file: &str, expected: &str, vars: bool) {
+fn compilation_test(bf: &str, file: &str, expected: &str, vars: bool, inv: bool) {
     let bf_filename = format!("{}.b98", file);
     let rs_filename = format!("{}.rs", file);
 
@@ -16,7 +16,7 @@ fn compilation_test(bf: &str, file: &str, expected: &str, vars: bool) {
         }
     }
 
-    let p = Parser::new(vars, true, Some(rs_filename.to_string()));
+    let p = Parser::new(vars, inv, true, Some(rs_filename.to_string()));
     match p.parse(&bf_filename.to_string()) {
         Err(e) => {
             clean_files(file);
@@ -58,22 +58,27 @@ fn clean_files(file: &str) {
 
 #[test]
 fn test_simple() {
-    compilation_test("0\"olleH\">:#,_@", "simp", "Hello", false);
+    compilation_test("0\"olleH\">:#,_@", "simp", "Hello", false, false);
 }
 
 #[test]
 #[should_fail]
 fn test_invalid_char() {
-    compilation_test("m@", "inv_char", "", false);
+    compilation_test("a.m@", "inv_char", "", false, false);
+}
+
+#[test]
+fn test_ignore_invalid_char() {
+    compilation_test("a.m@", "inv_char_2", "10", false, true);
 }
 
 #[test]
 #[should_fail]
 fn test_disable_var() {
-    compilation_test("555p55g.@", "var_dis", "", false);
+    compilation_test("555p55g.@", "var_dis", "", false, false);
 }
 
 #[test]
 fn test_enable_var() {
-    compilation_test("555p55g.@", "var_en", "5", true);
+    compilation_test("555p55g.@", "var_en", "5", true, false);
 }

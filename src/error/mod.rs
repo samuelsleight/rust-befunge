@@ -17,7 +17,12 @@ impl Show for ParserError {
             &CmdError => write!(f, "Error parsing command line args"),
             &FileReadError(ref file) => write!(f, "Unable to read file: {}", file),
             &FileEmptyError(ref file) => write!(f, "File is empty: {}", file),
-            &UnexpectedChar(x, y, c) => write!(f, "Unexpected char at ({}, {}): {}", x, y, c),
+
+            &UnexpectedChar(x, y, c) => {
+                try!(write!(f, "Unexpected char at ({}, {}): {}\n", x, y, c));
+                try!(write!(f, "This may be because of a 'j' or other reason\n"));
+                write!(f, "Try passing '--exit-on-invalid' to ignore this")
+            }
 
             &VarsDisabled => {
                 try!(write!(f, "Using 'p' or 'g' is disabled by default.\n"));

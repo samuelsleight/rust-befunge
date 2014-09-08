@@ -19,6 +19,7 @@ pub enum Action {
     Jump(Vec<uint>),
     If(uint, uint),
     Compare(uint, uint, uint),
+    CallState(uint),
     Clear,
     End,
     TablePut,
@@ -67,6 +68,8 @@ impl Action {
                 .and_then(|_| writer.write_line(format!("            (_, None) => self.state{}()", r).as_slice()))
                 .and_then(|_| writer.write_line("        }"))
             },
+
+            &CallState(s) => writer.write_line(format!("        self.state{}()", s).as_slice()),
 
             &Clear => writer.write_line("        self.stack.clear();"),
 
