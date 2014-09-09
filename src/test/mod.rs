@@ -16,7 +16,7 @@ fn compilation_test(bf: &str, file: &str, expected: &str, vars: bool, inv: bool)
         }
     }
 
-    let p = Parser::new(vars, inv, true, Some(rs_filename.to_string()));
+    let p = Parser::new(vars, inv, true, true, Some(rs_filename.to_string()));
     match p.parse(&bf_filename.to_string()) {
         Err(e) => {
             clean_files(file);
@@ -81,4 +81,9 @@ fn test_disable_var() {
 #[test]
 fn test_enable_var() {
     compilation_test("555p55g.@", "var_en", "5", true, false);
+}
+
+#[test]
+fn test_jump() {
+    compilation_test("2j234.@", "jump", "4", false, false);
 }

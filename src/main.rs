@@ -19,15 +19,17 @@ struct Parser {
     vars_enabled: bool,
     exit_on_invalid: bool,
     opt_eval: bool,
+    opt_j_eval: bool,
     output_file: Option<String>
 }
 
 impl Parser {
-    fn new(vars: bool, inv: bool, eval: bool, output: Option<String>) -> Parser {
+    fn new(vars: bool, inv: bool, eval: bool, jeval: bool, output: Option<String>) -> Parser {
         Parser {
             vars_enabled: vars,
             exit_on_invalid: inv,
             opt_eval: eval,
+            opt_j_eval: jeval,
             output_file: output
         }
     }
@@ -104,8 +106,6 @@ impl Parser {
         let mut next_state = 1u;
 
         loop {
-            stderr().write_line(format!("State: {}", state).as_slice());
-
             if state >= ip_queue.len() {
                 break
             }
@@ -324,27 +324,78 @@ impl Parser {
                         },
 
                         'j' => {
-                            let mut new_ip = ip.clone();
-                            let mut jump_vec = Vec::new();
+                            match actions.get_mut(state).pop() {
+                                Some(action::PushNumber(n)) if self.opt_j_eval => {
+                                    let mut new_ip = ip.clone();
 
-                            loop {
-                                new_ip.advance(width, height);
+                                    if n < 0 {
+                                        new_ip.flip();
+                                    }
 
-                                let new_state = *states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
-                                if new_state == next_state {
-                                    ip_queue.push(new_ip);
-                                    next_state += 1;
-                                }
-                                jump_vec.push(new_state);
+                                    for _ in range(1, n) {
+                                        new_ip.advance(width, height);
+                                    }
 
-                                if new_ip == ip {
+                                    let new_state = *states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
+                                    if new_state == next_state {
+                                        ip_queue.push(new_ip);
+                                        next_state += 1;
+                                    }
+
+                                    actions.get_mut(state).push(action::CallState(new_state));
+                                    used_actions.insert(action::CallState(0));
+                                    break;
+                                },
+
+                                Some(action::PushChar(c)) if self.opt_j_eval => {
+                                    let mut new_ip = ip.clone();
+                                    let n = c as int;
+
+                                    if n < 0 {
+                                        new_ip.flip();
+                                    }
+
+                                    for _ in range(1, n) {
+                                        new_ip.advance(width, height);
+                                    }
+
+                                    let new_state = *states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
+                                    if new_state == next_state {
+                                        ip_queue.push(new_ip);
+                                        next_state += 1;
+                                    }
+
+                                    actions.get_mut(state).push(action::CallState(new_state));
+                                    used_actions.insert(action::CallState(0));
+                                    break;
+                                },
+
+                                act => {
+                                    act.map(|a| actions.get_mut(state).push(a));
+
+                                    let mut new_ip = ip.clone();
+                                    let mut jump_vec = Vec::new();
+
+                                    loop {
+                                        new_ip.advance(width, height);
+
+                                        let new_state = *states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
+                                        if new_state == next_state {
+                                            ip_queue.push(new_ip);
+                                            next_state += 1;
+                                        }
+                                        jump_vec.push(new_state);
+
+                                        if new_ip == ip {
+                                            break
+                                        }
+                                    };
+
+                                    actions.get_mut(state).push(action::Jump(jump_vec));
+                                    used_actions.insert(action::Jump(Vec::new()));
                                     break
                                 }
-                            };
-
-                            actions.get_mut(state).push(action::Jump(jump_vec));
-                            used_actions.insert(action::Jump(Vec::new()));
-                            break
+                            }
                         },
 
                         c @ '_' | c @ '|' => {
@@ -436,8 +487,6 @@ impl Parser {
                         }
                     }
                 }
-
-                // stderr().write_line(format!("{}", actions.get_mut(state).last()).as_slice());
 
                 ip.advance(width, height)
             }
@@ -598,6 +647,7 @@ fn main() {
     let mut vars = false;
     let mut inv = false;
     let mut eval = true;
+    let mut jeval = true;
     let mut filename = None;
     let mut output = None;
 
@@ -624,6 +674,8 @@ fn main() {
 
             "--no-eval" => eval = false,
 
+            "--no-j-eval" => jeval = false,
+
             s => filename = Some(s.to_string())
         }
 
@@ -634,7 +686,7 @@ fn main() {
         return print_usage()
     }
 
-    let parser = Parser::new(vars, inv, eval, output);
+    let parser = Parser::new(vars, inv, eval, jeval, output);
 
     match parser.parse(&filename.unwrap()) {
         Err(e) => exit(e),
