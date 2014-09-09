@@ -16,6 +16,7 @@ pub enum Action {
     Multiply,
     Pop,
     Swap,
+    Random(uint, uint, uint, uint),
     Jump(Vec<uint>),
     If(uint, uint),
     Compare(uint, uint, uint),
@@ -41,6 +42,16 @@ impl Action {
             &Divide => writer.write_line("        self.divide();"),
             &Pop => writer.write_line("        self.stack.pop();"),
             &Swap => writer.write_line("        self.swap();"),
+
+            &Random(u, d, l, r) => {
+                writer.write_line("        match random::<uint>() % 4 {")
+                .and_then(|_| writer.write_line(format!("            0 => self.state{}(),", u).as_slice()))
+                .and_then(|_| writer.write_line(format!("            1 => self.state{}(),", d).as_slice()))
+                .and_then(|_| writer.write_line(format!("            2 => self.state{}(),", l).as_slice()))
+                .and_then(|_| writer.write_line(format!("            3 => self.state{}(),", r).as_slice()))
+                .and_then(|_| writer.write_line("            _ => ()"))
+                .and_then(|_| writer.write_line("        }"))
+            }
 
             &Jump(ref v) => {
                 writer.write_line("        match self.stack.pop() {")

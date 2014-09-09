@@ -323,16 +323,53 @@ impl Parser {
                             used_actions.insert(action::PushChar(' '));
                         },
 
+                        '?' => {
+                            let new_up = ip.new_up(width, height);
+                            let new_down = ip.new_down(width, height);
+                            let new_left = ip.new_left(width, height);
+                            let new_right = ip.new_right(width, height);
+
+                            let up_state = *states.get_mut(new_up.y as uint).get_mut(new_up.x as uint).find_or_insert(new_up.delta(), next_state);
+                            if up_state == next_state {
+                                ip_queue.push(new_up);
+                                next_state += 1;
+                            }
+
+                            let down_state = *states.get_mut(new_down.y as uint).get_mut(new_down.x as uint).find_or_insert(new_down.delta(), next_state);
+                            if down_state == next_state {
+                                ip_queue.push(new_down);
+                                next_state += 1;
+                            }
+                            
+                            let left_state = *states.get_mut(new_left.y as uint).get_mut(new_left.x as uint).find_or_insert(new_left.delta(), next_state);
+                            if left_state == next_state {
+                                ip_queue.push(new_left);
+                                next_state += 1;
+                            }
+
+                            let right_state = *states.get_mut(new_right.y as uint).get_mut(new_right.x as uint).find_or_insert(new_right.delta(), next_state);
+                            if right_state == next_state {
+                                ip_queue.push(new_right);
+                                next_state += 1;
+                            }
+
+                            actions.get_mut(state).push(action::Random(up_state, down_state, left_state, right_state));
+                            used_actions.insert(action::Random(0, 0, 0, 0));
+                            break;
+                        }
+
                         'j' => {
                             match actions.get_mut(state).pop() {
                                 Some(action::PushNumber(n)) if self.opt_j_eval => {
                                     let mut new_ip = ip.clone();
+                                    let mut r = range(0, n + 1);
 
                                     if n < 0 {
                                         new_ip.flip();
+                                        r = range(1, n)
                                     }
 
-                                    for _ in range(1, n) {
+                                    for _ in r {
                                         new_ip.advance(width, height);
                                     }
 
@@ -350,12 +387,14 @@ impl Parser {
                                 Some(action::PushChar(c)) if self.opt_j_eval => {
                                     let mut new_ip = ip.clone();
                                     let n = c as int;
+                                    let mut r = range(0, n + 1);
 
                                     if n < 0 {
                                         new_ip.flip();
+                                        r = range(1, n)
                                     }
 
-                                    for _ in range(1, n) {
+                                    for _ in r {
                                         new_ip.advance(width, height);
                                     }
 
@@ -513,6 +552,10 @@ impl Parser {
 
         .and_then(|_| if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
             writer.write_line("use std::collections::HashMap;")
+        } else { Ok(()) })
+
+        .and_then(|_| if used_actions.contains(&action::Random(0, 0, 0, 0)) {
+            writer.write_line("use std::rand::random;")
         } else { Ok(()) })
 
         .and_then(|_| writer.write_line(""))
