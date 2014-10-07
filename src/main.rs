@@ -1,6 +1,9 @@
+#![feature(if_let)]
+
 use std::os;
 use std::vec::Vec;
 use std::collections::{HashMap, TreeSet};
+use std::collections::hashmap::{Vacant, Occupied};
 use std::io::{BufferedReader, File, IoError};
 use std::io::stdio::{stdout, stderr};
 
@@ -60,7 +63,7 @@ impl Parser {
                         grid.push(Vec::new())
                     },
 
-                    Ok(c) => grid.mut_last().unwrap().push(c),
+                    Ok(c) => grid.last_mut().unwrap().push(c),
                     Err(_) => break
                 }
             }
@@ -68,10 +71,10 @@ impl Parser {
             let rows = grid.len() - 1;
             grid.truncate(rows);
 
-            for row in grid.mut_iter() {
+            for row in grid.iter_mut() {
                 let inc = max_len - row.len();
                 if inc > 0 {
-                    row.grow(inc, &' ')
+                    row.grow(inc, ' ')
                 }
             }
 
@@ -94,7 +97,7 @@ impl Parser {
         let mut states = Vec::new();
         states.grow_fn(height, |_| {
             let mut v = Vec::new();
-            v.grow(width, &HashMap::new());
+            v.grow(width, HashMap::new());
             v
         });
 
@@ -111,7 +114,9 @@ impl Parser {
             }
 
             let mut ip = ip_queue[state].clone();
-            states.get_mut(ip.y as uint).get_mut(ip.x as uint).find_or_insert(ip.delta(), state);
+            if let Vacant(entry) = states.get_mut(ip.y as uint).get_mut(ip.x as uint).entry(ip.delta()) {
+                entry.set(state);
+            }
 
             actions.push(Vec::new());
 
@@ -149,12 +154,12 @@ impl Parser {
                         '#' => ip.advance(width, height),
                         '"' => stringmode = true,
 
-                        c @ '0'..'9' => { 
+                        c @ '0' ... '9' => { 
                             actions.get_mut(state).push(action::PushNumber(c.to_digit(10).unwrap() as int));
                             used_actions.insert(action::PushNumber(0));
                         },
 
-                        c @ 'a'..'f' => {
+                        c @ 'a' ... 'f' => {
                             actions.get_mut(state).push(action::PushNumber(c.to_digit(16).unwrap() as int));
                             used_actions.insert(action::PushNumber(0));
                         },
@@ -329,29 +334,53 @@ impl Parser {
                             let new_left = ip.new_left(width, height);
                             let new_right = ip.new_right(width, height);
 
-                            let up_state = *states.get_mut(new_up.y as uint).get_mut(new_up.x as uint).find_or_insert(new_up.delta(), next_state);
-                            if up_state == next_state {
-                                ip_queue.push(new_up);
-                                next_state += 1;
-                            }
+                            let up_state = match states.get_mut(new_up.y as uint).get_mut(new_up.x as uint).entry(new_up.delta()) {
+                                Vacant(entry) => {
+                                    entry.set(next_state);
+                                    ip_queue.push(new_up);
+                                    next_state += 1;
 
-                            let down_state = *states.get_mut(new_down.y as uint).get_mut(new_down.x as uint).find_or_insert(new_down.delta(), next_state);
-                            if down_state == next_state {
-                                ip_queue.push(new_down);
-                                next_state += 1;
-                            }
-                            
-                            let left_state = *states.get_mut(new_left.y as uint).get_mut(new_left.x as uint).find_or_insert(new_left.delta(), next_state);
-                            if left_state == next_state {
-                                ip_queue.push(new_left);
-                                next_state += 1;
-                            }
+                                    next_state - 1
+                                },
 
-                            let right_state = *states.get_mut(new_right.y as uint).get_mut(new_right.x as uint).find_or_insert(new_right.delta(), next_state);
-                            if right_state == next_state {
-                                ip_queue.push(new_right);
-                                next_state += 1;
-                            }
+                                Occupied(entry) => *entry.into_mut()
+                            };
+
+                            let down_state = match states.get_mut(new_down.y as uint).get_mut(new_down.x as uint).entry(new_down.delta()) {
+                                Vacant(entry) => {
+                                    entry.set(next_state);
+                                    ip_queue.push(new_down);
+                                    next_state += 1;
+
+                                    next_state - 1
+                                },
+
+                                Occupied(entry) => *entry.into_mut()
+                            };
+
+                            let left_state = match states.get_mut(new_left.y as uint).get_mut(new_left.x as uint).entry(new_left.delta()) {
+                                Vacant(entry) => {
+                                    entry.set(next_state);
+                                    ip_queue.push(new_left);
+                                    next_state += 1;
+
+                                    next_state - 1
+                                },
+
+                                Occupied(entry) => *entry.into_mut()
+                            };
+
+                            let right_state = match states.get_mut(new_right.y as uint).get_mut(new_right.x as uint).entry(new_right.delta()) {
+                                Vacant(entry) => {
+                                    entry.set(next_state);
+                                    ip_queue.push(new_right);
+                                    next_state += 1;
+
+                                    next_state - 1
+                                },
+
+                                Occupied(entry) => *entry.into_mut()
+                            };
 
                             actions.get_mut(state).push(action::Random(up_state, down_state, left_state, right_state));
                             used_actions.insert(action::Random(0, 0, 0, 0));
@@ -373,11 +402,17 @@ impl Parser {
                                         new_ip.advance(width, height);
                                     }
 
-                                    let new_state = *states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
-                                    if new_state == next_state {
-                                        ip_queue.push(new_ip);
-                                        next_state += 1;
-                                    }
+                                    let new_state = match states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).entry(new_ip.delta()) {
+                                        Vacant(entry) => {
+                                            entry.set(next_state);
+                                            ip_queue.push(new_ip);
+                                            next_state += 1;
+
+                                            next_state - 1
+                                        },
+
+                                        Occupied(entry) => *entry.into_mut()
+                                    };
 
                                     actions.get_mut(state).push(action::CallState(new_state));
                                     used_actions.insert(action::CallState(0));
@@ -398,11 +433,17 @@ impl Parser {
                                         new_ip.advance(width, height);
                                     }
 
-                                    let new_state = *states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
-                                    if new_state == next_state {
-                                        ip_queue.push(new_ip);
-                                        next_state += 1;
-                                    }
+                                    let new_state = match states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).entry(new_ip.delta()) {
+                                        Vacant(entry) => {
+                                            entry.set(next_state);
+                                            ip_queue.push(new_ip);
+                                            next_state += 1;
+
+                                            next_state - 1
+                                        },
+
+                                        Occupied(entry) => *entry.into_mut()
+                                    };
 
                                     actions.get_mut(state).push(action::CallState(new_state));
                                     used_actions.insert(action::CallState(0));
@@ -418,11 +459,17 @@ impl Parser {
                                     loop {
                                         new_ip.advance(width, height);
 
-                                        let new_state = *states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).find_or_insert(new_ip.delta(), next_state);
-                                        if new_state == next_state {
-                                            ip_queue.push(new_ip);
-                                            next_state += 1;
-                                        }
+                                        let new_state = match states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).entry(new_ip.delta()) {
+                                            Vacant(entry) => {
+                                                entry.set(next_state);
+                                                ip_queue.push(new_ip);
+                                                next_state += 1;
+
+                                                next_state - 1
+                                            },
+
+                                            Occupied(entry) => *entry.into_mut()
+                                        };
                                         jump_vec.push(new_state);
 
                                         if new_ip == ip {
@@ -441,17 +488,29 @@ impl Parser {
                             let true_ip = if c == '_' { ip.new_left(width, height) } else { ip.new_up(width, height) };
                             let false_ip = if c == '_' { ip.new_right(width, height) } else { ip.new_down(width, height) };
 
-                            let true_state = *states.get_mut(true_ip.y as uint).get_mut(true_ip.x as uint).find_or_insert(true_ip.delta(), next_state);
-                            if true_state == next_state {
-                                ip_queue.push(true_ip);
-                                next_state += 1
-                            }
+                            let true_state = match states.get_mut(true_ip.y as uint).get_mut(true_ip.x as uint).entry(true_ip.delta()) {
+                                Vacant(entry) => {
+                                    entry.set(next_state);
+                                    ip_queue.push(true_ip);
+                                    next_state += 1;
 
-                            let false_state = *states.get_mut(false_ip.y as uint).get_mut(false_ip.x as uint).find_or_insert(false_ip.delta(), next_state);
-                            if false_state == next_state {
-                                ip_queue.push(false_ip);
-                                next_state += 1
-                            }
+                                    next_state - 1
+                                },
+
+                                Occupied(entry) => *entry.into_mut()
+                            };
+
+                            let false_state = match states.get_mut(false_ip.y as uint).get_mut(false_ip.x as uint).entry(false_ip.delta()) {
+                                Vacant(entry) => {
+                                    entry.set(next_state);
+                                    ip_queue.push(false_ip);
+                                    next_state += 1;
+
+                                    next_state - 1
+                                },
+
+                                Occupied(entry) => *entry.into_mut()
+                            };
 
                             actions.get_mut(state).push(action::If(true_state, false_state));
                             used_actions.insert(action::If(0, 0));
@@ -463,23 +522,41 @@ impl Parser {
                             let l_ip = ip.new_turn_left(width, height);
                             let r_ip = ip.new_turn_right(width, height);
 
-                            let s_state = *states.get_mut(s_ip.y as uint).get_mut(s_ip.x as uint).find_or_insert(s_ip.delta(), next_state);
-                            if s_state == next_state {
-                                ip_queue.push(s_ip);
-                                next_state += 1
-                            }
+                            let s_state = match states.get_mut(s_ip.y as uint).get_mut(s_ip.x as uint).entry(s_ip.delta()) {
+                                Vacant(entry) => {
+                                    entry.set(next_state);
+                                    ip_queue.push(s_ip);
+                                    next_state += 1;
 
-                            let l_state = *states.get_mut(l_ip.y as uint).get_mut(l_ip.x as uint).find_or_insert(l_ip.delta(), next_state);
-                            if l_state == next_state {
-                                ip_queue.push(l_ip);
-                                next_state += 1
-                            }
+                                    next_state - 1
+                                },
 
-                            let r_state = *states.get_mut(r_ip.y as uint).get_mut(r_ip.x as uint).find_or_insert(r_ip.delta(), next_state);
-                            if r_state == next_state {
-                                ip_queue.push(r_ip);
-                                next_state += 1
-                            }
+                                Occupied(entry) => *entry.into_mut()
+                            };
+
+                            let l_state = match states.get_mut(l_ip.y as uint).get_mut(l_ip.x as uint).entry(l_ip.delta()) {
+                                Vacant(entry) => {
+                                    entry.set(next_state);
+                                    ip_queue.push(l_ip);
+                                    next_state += 1;
+
+                                    next_state - 1
+                                },
+
+                                Occupied(entry) => *entry.into_mut()
+                            };
+
+                            let r_state = match states.get_mut(r_ip.y as uint).get_mut(r_ip.x as uint).entry(r_ip.delta()) {
+                                Vacant(entry) => {
+                                    entry.set(next_state);
+                                    ip_queue.push(r_ip);
+                                    next_state += 1;
+
+                                    next_state - 1
+                                },
+
+                                Occupied(entry) => *entry.into_mut()
+                            };
 
                             actions.get_mut(state).push(action::Compare(s_state, l_state, r_state));
                             used_actions.insert(action::Compare(0, 0, 0));
@@ -620,18 +697,15 @@ fn main() {
     }
 
     fn write_output(&self, (actions, used_actions): (Vec<Vec<action::Action>>, TreeSet<action::Action>)) -> Result<(), ParserError> {
-        let mut state = 0i;
-
         match self.output_file {
             Some(ref f) => {
                 let mut writer = File::create(&Path::new(f.clone()));
                 self.write_first(&mut writer, &used_actions)
 
-                .and_then(|_| actions.iter().fold(Ok(()), |acc, vec| acc.and_then(|_| {
+                .and_then(|_| actions.iter().enumerate().fold(Ok(()), |acc, (state, vec)| acc.and_then(|_| {
                     writer.write_line(format!("\n    fn state{}(&mut self) {{", state).as_slice())
                     .and_then(|_| vec.iter().fold(Ok(()), |acc2, act| acc2.and_then(|_| act.write_to(&mut writer))))
                     .and_then(|_| writer.write_line("    }"))
-                    .map(|_| state += 1)
                 })))
 
                 .and_then(|_| self.write_end(&mut writer))
@@ -642,11 +716,10 @@ fn main() {
                 let mut writer = stdout(); 
                 self.write_first(&mut writer, &used_actions)
 
-                .and_then(|_| actions.iter().fold(Ok(()), |acc, vec| acc.and_then(|_| {
+                .and_then(|_| actions.iter().enumerate().fold(Ok(()), |acc, (state, vec)| acc.and_then(|_| {
                     writer.write_line(format!("\n    fn state{}(&mut self) {{", state).as_slice())
                     .and_then(|_| vec.iter().fold(Ok(()), |acc2, act| acc2.and_then(|_| act.write_to(&mut writer))))
                     .and_then(|_| writer.write_line("    }"))
-                    .map(|_| state += 1)
                 })))
 
                 .and_then(|_| self.write_end(&mut writer))

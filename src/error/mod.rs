@@ -1,6 +1,6 @@
 use std::fmt::{Show, Formatter, Result};
 
-#[deriving(Copy, Clone)]
+#[deriving(Clone)]
 pub enum ParserError {
     CmdError,
     FileReadError(String),
