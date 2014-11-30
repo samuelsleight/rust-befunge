@@ -79,12 +79,12 @@ impl Parser {
             }
 
             if grid.is_empty() {
-                Err(error::FileEmptyError(filename.clone()))
+                Err(error::ParserError::FileEmptyError(filename.clone()))
             } else {
                 Ok(grid)
             }
         } else {
-            Err(error::FileReadError(filename.clone()))
+            Err(error::ParserError::FileReadError(filename.clone()))
         }
     }
 
@@ -127,15 +127,15 @@ impl Parser {
                     match code[ip.y as uint][ip.x as uint] {
                         '"' => stringmode = false,
                         c => { 
-                            actions[state].push(action::PushChar(c));
-                            used_actions.insert(action::PushChar(' '));
+                            actions[state].push(action::Action::PushChar(c));
+                            used_actions.insert(action::Action::PushChar(' '));
                         }
                     }
                 } else {
                     match states[ip.y as uint][ip.x as uint].get(&ip.delta()) {
                         Some(s) if !first => {
-                            actions[state].push(action::CallState(*s));
-                            used_actions.insert(action::CallState(0));
+                            actions[state].push(action::Action::CallState(*s));
+                            used_actions.insert(action::Action::CallState(0));
                             break
                         }
 
@@ -156,177 +156,177 @@ impl Parser {
                         '"' => stringmode = true,
 
                         c @ '0' ... '9' => { 
-                            actions[state].push(action::PushNumber(c.to_digit(10).unwrap() as int));
-                            used_actions.insert(action::PushNumber(0));
+                            actions[state].push(action::Action::PushNumber(c.to_digit(10).unwrap() as int));
+                            used_actions.insert(action::Action::PushNumber(0));
                         },
 
                         c @ 'a' ... 'f' => {
-                            actions[state].push(action::PushNumber(c.to_digit(16).unwrap() as int));
-                            used_actions.insert(action::PushNumber(0));
+                            actions[state].push(action::Action::PushNumber(c.to_digit(16).unwrap() as int));
+                            used_actions.insert(action::Action::PushNumber(0));
                         },
 
                         '~' => {
-                            actions[state].push(action::InputChar);
-                            used_actions.insert(action::InputChar);
+                            actions[state].push(action::Action::InputChar);
+                            used_actions.insert(action::Action::InputChar);
                         },
 
                         ',' => {
-                            actions[state].push(action::OutputChar);
-                            used_actions.insert(action::OutputChar);
+                            actions[state].push(action::Action::OutputChar);
+                            used_actions.insert(action::Action::OutputChar);
                         },
 
                         '.' => {
-                            actions[state].push(action::OutputNumber);
-                            used_actions.insert(action::OutputNumber);
+                            actions[state].push(action::Action::OutputNumber);
+                            used_actions.insert(action::Action::OutputNumber);
                         },
 
                         '+' => {
                             if self.opt_eval {
                                 match (actions[state].pop(), actions[state].pop()) {
-                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(a + b)),
-                                    (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
-                                  | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions[state].push(action::PushNumber(n + (c as int))),
-                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber(a as int + b as int)),
+                                    (Some(action::Action::PushNumber(a)), Some(action::Action::PushNumber(b))) => actions[state].push(action::Action::PushNumber(a + b)),
+                                    (Some(action::Action::PushChar(c)), Some(action::Action::PushNumber(n))) 
+                                  | (Some(action::Action::PushNumber(n)), Some(action::Action::PushChar(c))) => actions[state].push(action::Action::PushNumber(n + (c as int))),
+                                    (Some(action::Action::PushChar(a)), Some(action::Action::PushChar(b))) => actions[state].push(action::Action::PushNumber(a as int + b as int)),
 
                                     (Some(a), Some(b)) => {
                                         actions[state].push(b);
                                         actions[state].push(a);
-                                        actions[state].push(action::Add);
-                                        used_actions.insert(action::Add);
+                                        actions[state].push(action::Action::Add);
+                                        used_actions.insert(action::Action::Add);
                                     },
 
                                     (None, Some(a)) | (Some(a), None) => {
                                         actions[state].push(a);
-                                        actions[state].push(action::Add);
-                                        used_actions.insert(action::Add);
+                                        actions[state].push(action::Action::Add);
+                                        used_actions.insert(action::Action::Add);
                                     },
 
                                     (None, None) => {
-                                        actions[state].push(action::Add);
-                                        used_actions.insert(action::Add);
+                                        actions[state].push(action::Action::Add);
+                                        used_actions.insert(action::Action::Add);
                                     },
                                 }
                             } else {
-                                actions[state].push(action::Add);
-                                used_actions.insert(action::Add);
+                                actions[state].push(action::Action::Add);
+                                used_actions.insert(action::Action::Add);
                             }
                         },
 
                         '*' => {
                             if self.opt_eval {
                                 match (actions[state].pop(), actions[state].pop()) {
-                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(a * b)),
-                                    (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
-                                  | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions[state].push(action::PushNumber(n * (c as int))),
-                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber(a as int * b as int)),
+                                    (Some(action::Action::PushNumber(a)), Some(action::Action::PushNumber(b))) => actions[state].push(action::Action::PushNumber(a * b)),
+                                    (Some(action::Action::PushChar(c)), Some(action::Action::PushNumber(n))) 
+                                  | (Some(action::Action::PushNumber(n)), Some(action::Action::PushChar(c))) => actions[state].push(action::Action::PushNumber(n * (c as int))),
+                                    (Some(action::Action::PushChar(a)), Some(action::Action::PushChar(b))) => actions[state].push(action::Action::PushNumber(a as int * b as int)),
 
                                     (Some(a), Some(b)) => {
                                         actions[state].push(b);
                                         actions[state].push(a);
-                                        actions[state].push(action::Multiply);
-                                        used_actions.insert(action::Multiply);
+                                        actions[state].push(action::Action::Multiply);
+                                        used_actions.insert(action::Action::Multiply);
                                     },
 
                                     (None, Some(a)) | (Some(a), None) => {
                                         actions[state].push(a);
-                                        actions[state].push(action::Multiply);
-                                        used_actions.insert(action::Multiply);
+                                        actions[state].push(action::Action::Multiply);
+                                        used_actions.insert(action::Action::Multiply);
                                     },
 
                                     (None, None) => {
-                                        actions[state].push(action::Multiply);
-                                        used_actions.insert(action::Multiply);
+                                        actions[state].push(action::Action::Multiply);
+                                        used_actions.insert(action::Action::Multiply);
                                     },
                                 }
                             } else {
-                                actions[state].push(action::Multiply);
-                                used_actions.insert(action::Multiply);
+                                actions[state].push(action::Action::Multiply);
+                                used_actions.insert(action::Action::Multiply);
                             }
                         },
 
                         '-' => {
                             if self.opt_eval {
                                 match (actions[state].pop(), actions[state].pop()) {
-                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(b - a)),
-                                    (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(b - (a as int))),
-                                    (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber((b as int) - a)),
-                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber(b as int - a as int)),
+                                    (Some(action::Action::PushNumber(a)), Some(action::Action::PushNumber(b))) => actions[state].push(action::Action::PushNumber(b - a)),
+                                    (Some(action::Action::PushChar(a)), Some(action::Action::PushNumber(b))) => actions[state].push(action::Action::PushNumber(b - (a as int))),
+                                    (Some(action::Action::PushNumber(a)), Some(action::Action::PushChar(b))) => actions[state].push(action::Action::PushNumber((b as int) - a)),
+                                    (Some(action::Action::PushChar(a)), Some(action::Action::PushChar(b))) => actions[state].push(action::Action::PushNumber(b as int - a as int)),
 
                                     (Some(a), Some(b)) => {
                                         actions[state].push(b);
                                         actions[state].push(a);
-                                        actions[state].push(action::Subtract);
-                                        used_actions.insert(action::Subtract);
+                                        actions[state].push(action::Action::Subtract);
+                                        used_actions.insert(action::Action::Subtract);
                                     },
 
                                     (None, Some(a)) | (Some(a), None) => {
                                         actions[state].push(a);
-                                        actions[state].push(action::Subtract);
-                                        used_actions.insert(action::Subtract);
+                                        actions[state].push(action::Action::Subtract);
+                                        used_actions.insert(action::Action::Subtract);
                                     },
 
                                     (None, None) => {
-                                        actions[state].push(action::Subtract);
-                                        used_actions.insert(action::Subtract);
+                                        actions[state].push(action::Action::Subtract);
+                                        used_actions.insert(action::Action::Subtract);
                                     },
                                 }
                             } else {
-                                actions[state].push(action::Subtract);
-                                used_actions.insert(action::Subtract);
+                                actions[state].push(action::Action::Subtract);
+                                used_actions.insert(action::Action::Subtract);
                             }
                         },
 
                         '/' => {
                             if self.opt_eval {
                                 match (actions[state].pop(), actions[state].pop()) {
-                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(b / a)),
-                                    (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(b / (a as int))),
-                                    (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber((b as int) / a)),
-                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber(b as int / a as int)),
+                                    (Some(action::Action::PushNumber(a)), Some(action::Action::PushNumber(b))) => actions[state].push(action::Action::PushNumber(b / a)),
+                                    (Some(action::Action::PushChar(a)), Some(action::Action::PushNumber(b))) => actions[state].push(action::Action::PushNumber(b / (a as int))),
+                                    (Some(action::Action::PushNumber(a)), Some(action::Action::PushChar(b))) => actions[state].push(action::Action::PushNumber((b as int) / a)),
+                                    (Some(action::Action::PushChar(a)), Some(action::Action::PushChar(b))) => actions[state].push(action::Action::PushNumber(b as int / a as int)),
 
                                     (Some(a), Some(b)) => {
                                         actions[state].push(b);
                                         actions[state].push(a);
-                                        actions[state].push(action::Divide);
-                                        used_actions.insert(action::Divide);
+                                        actions[state].push(action::Action::Divide);
+                                        used_actions.insert(action::Action::Divide);
                                     },
 
                                     (None, Some(a)) | (Some(a), None) => {
                                         actions[state].push(a);
-                                        actions[state].push(action::Divide);
-                                        used_actions.insert(action::Divide);
+                                        actions[state].push(action::Action::Divide);
+                                        used_actions.insert(action::Action::Divide);
                                     },
 
                                     (None, None) => {
-                                        actions[state].push(action::Divide);
-                                        used_actions.insert(action::Divide);
+                                        actions[state].push(action::Action::Divide);
+                                        used_actions.insert(action::Action::Divide);
                                     },
                                 }
                             } else {
-                                actions[state].push(action::Divide);
-                                used_actions.insert(action::Divide);
+                                actions[state].push(action::Action::Divide);
+                                used_actions.insert(action::Action::Divide);
                             }
                         },
 
                         ':' => {
-                            actions[state].push(action::Duplicate);
-                            used_actions.insert(action::Duplicate);
+                            actions[state].push(action::Action::Duplicate);
+                            used_actions.insert(action::Action::Duplicate);
                         },
 
                         '$' => {
-                            actions[state].push(action::Pop);
-                            used_actions.insert(action::Pop);
+                            actions[state].push(action::Action::Pop);
+                            used_actions.insert(action::Action::Pop);
                         },
 
                         '\\' => {
-                            actions[state].push(action::Swap);
-                            used_actions.insert(action::Swap);
+                            actions[state].push(action::Action::Swap);
+                            used_actions.insert(action::Action::Swap);
                         },
 
                         '\'' => {
                             ip.advance(width, height);
-                            actions[state].push(action::PushChar(code[ip.y as uint][ip.x as uint]));
-                            used_actions.insert(action::PushChar(' '));
+                            actions[state].push(action::Action::PushChar(code[ip.y as uint][ip.x as uint]));
+                            used_actions.insert(action::Action::PushChar(' '));
                         },
 
                         '?' => {
@@ -383,14 +383,14 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            actions[state].push(action::Random(up_state, down_state, left_state, right_state));
-                            used_actions.insert(action::Random(0, 0, 0, 0));
+                            actions[state].push(action::Action::Random(up_state, down_state, left_state, right_state));
+                            used_actions.insert(action::Action::Random(0, 0, 0, 0));
                             break;
                         }
 
                         'j' => {
                             match actions[state].pop() {
-                                Some(action::PushNumber(n)) if self.opt_j_eval => {
+                                Some(action::Action::PushNumber(n)) if self.opt_j_eval => {
                                     let mut new_ip = ip.clone();
                                     let mut r = range(0, n + 1);
 
@@ -415,12 +415,12 @@ impl Parser {
                                         Occupied(entry) => *entry.into_mut()
                                     };
 
-                                    actions[state].push(action::CallState(new_state));
-                                    used_actions.insert(action::CallState(0));
+                                    actions[state].push(action::Action::CallState(new_state));
+                                    used_actions.insert(action::Action::CallState(0));
                                     break;
                                 },
 
-                                Some(action::PushChar(c)) if self.opt_j_eval => {
+                                Some(action::Action::PushChar(c)) if self.opt_j_eval => {
                                     let mut new_ip = ip.clone();
                                     let n = c as int;
                                     let mut r = range(0, n + 1);
@@ -446,8 +446,8 @@ impl Parser {
                                         Occupied(entry) => *entry.into_mut()
                                     };
 
-                                    actions[state].push(action::CallState(new_state));
-                                    used_actions.insert(action::CallState(0));
+                                    actions[state].push(action::Action::CallState(new_state));
+                                    used_actions.insert(action::Action::CallState(0));
                                     break;
                                 },
 
@@ -478,8 +478,8 @@ impl Parser {
                                         }
                                     };
 
-                                    actions[state].push(action::Jump(jump_vec));
-                                    used_actions.insert(action::Jump(Vec::new()));
+                                    actions[state].push(action::Action::Jump(jump_vec));
+                                    used_actions.insert(action::Action::Jump(Vec::new()));
                                     break
                                 }
                             }
@@ -513,8 +513,8 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            actions[state].push(action::If(true_state, false_state));
-                            used_actions.insert(action::If(0, 0));
+                            actions[state].push(action::Action::If(true_state, false_state));
+                            used_actions.insert(action::Action::If(0, 0));
                             break
                         },
 
@@ -559,37 +559,37 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            actions[state].push(action::Compare(s_state, l_state, r_state));
-                            used_actions.insert(action::Compare(0, 0, 0));
+                            actions[state].push(action::Action::Compare(s_state, l_state, r_state));
+                            used_actions.insert(action::Action::Compare(0, 0, 0));
                             break
                         },
 
                         'n' => {
-                            actions[state].push(action::Clear);
-                            used_actions.insert(action::Clear);
+                            actions[state].push(action::Action::Clear);
+                            used_actions.insert(action::Action::Clear);
                         },
 
                         '@' => {
-                            actions[state].push(action::End);
-                            used_actions.insert(action::End);
+                            actions[state].push(action::Action::End);
+                            used_actions.insert(action::Action::End);
                             break
                         },
 
                         'p' => {
                             if self.vars_enabled {
-                                actions[state].push(action::TablePut);
-                                used_actions.insert(action::TablePut);
+                                actions[state].push(action::Action::TablePut);
+                                used_actions.insert(action::Action::TablePut);
                             } else {
-                                return Err(error::VarsDisabled)
+                                return Err(error::ParserError::VarsDisabled)
                             }
                         },
 
                         'g' => {
                             if self.vars_enabled {
-                                actions[state].push(action::TableGet);
-                                used_actions.insert(action::TableGet);
+                                actions[state].push(action::Action::TableGet);
+                                used_actions.insert(action::Action::TableGet);
                             } else {
-                                return Err(error::VarsDisabled)
+                                return Err(error::ParserError::VarsDisabled)
                             }
                         },
 
@@ -597,7 +597,7 @@ impl Parser {
 
                         c @ _ => {
                             if !self.exit_on_invalid {
-                                return Err(error::UnexpectedChar(ip.x, ip.y, c))
+                                return Err(error::ParserError::UnexpectedChar(ip.x, ip.y, c))
                             } else {
                                 ()
                             }
@@ -618,28 +618,28 @@ impl Parser {
         writer.write_line("use std::char;")
         .and_then(|_| writer.write_line("use std::vec::Vec;"))
 
-        .and_then(|_| if used_actions.contains(&action::OutputChar) || used_actions.contains(&action::OutputNumber) {
+        .and_then(|_| if used_actions.contains(&action::Action::OutputChar) || used_actions.contains(&action::Action::OutputNumber) {
             writer.write_line("use std::io::LineBufferedWriter;")
             .and_then(|_| writer.write_line("use std::io::stdio::{StdWriter, stdout};"))
         } else { Ok(()) })
 
-        .and_then(|_| if used_actions.contains(&action::InputChar) || used_actions.contains(&action::InputNumber) {
+        .and_then(|_| if used_actions.contains(&action::Action::InputChar) || used_actions.contains(&action::Action::InputNumber) {
             writer.write_line("use std::io::BufferedReader;")
             .and_then(|_| writer.write_line("use std::io::stdio::{StdReader, stdin};"))
         } else { Ok(()) })
 
-        .and_then(|_| if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
+        .and_then(|_| if used_actions.contains(&action::Action::TableGet) || used_actions.contains(&action::Action::TablePut) {
             writer.write_line("use std::collections::HashMap;")
             .and_then(|_| writer.write_line("use std::collections::hash_map::{Vacant, Occupied};"))
         } else { Ok(()) })
 
-        .and_then(|_| if used_actions.contains(&action::Random(0, 0, 0, 0)) {
+        .and_then(|_| if used_actions.contains(&action::Action::Random(0, 0, 0, 0)) {
             writer.write_line("use std::rand::random;")
         } else { Ok(()) })
 
         .and_then(|_| writer.write_line(""))
 
-        .and_then(|_| if used_actions.contains(&action::Jump(Vec::new())) {
+        .and_then(|_| if used_actions.contains(&action::Action::Jump(Vec::new())) {
             writer.write_line("fn modulus(mut a: int, b: int) -> int {")
             .and_then(|_| writer.write_line("    while a < 0 {"))
             .and_then(|_| writer.write_line("        a += b"))
@@ -651,15 +651,15 @@ impl Parser {
         .and_then(|_| writer.write_line("struct Program {"))
         .and_then(|_| writer.write_line("    stack: Vec<int>,"))
 
-        .and_then(|_| if used_actions.contains(&action::OutputChar) || used_actions.contains(&action::OutputNumber) {
+        .and_then(|_| if used_actions.contains(&action::Action::OutputChar) || used_actions.contains(&action::Action::OutputNumber) {
             writer.write_line("    output: LineBufferedWriter<StdWriter>,")
         } else { Ok(()) })
 
-        .and_then(|_| if used_actions.contains(&action::InputChar) || used_actions.contains(&action::InputNumber) {
+        .and_then(|_| if used_actions.contains(&action::Action::InputChar) || used_actions.contains(&action::Action::InputNumber) {
             writer.write_line("    input: BufferedReader<StdReader>,")
         } else { Ok(()) })
 
-        .and_then(|_| if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
+        .and_then(|_| if used_actions.contains(&action::Action::TableGet) || used_actions.contains(&action::Action::TablePut) {
             writer.write_line("    table: HashMap<(int, int), int>,")
         } else { Ok(()) })
 
@@ -670,15 +670,15 @@ impl Parser {
         .and_then(|_| writer.write_line("        let mut p = Program {"))
         .and_then(|_| writer.write_line("            stack: Vec::new(),"))
 
-        .and_then(|_| if used_actions.contains(&action::OutputChar) || used_actions.contains(&action::OutputNumber) {
+        .and_then(|_| if used_actions.contains(&action::Action::OutputChar) || used_actions.contains(&action::Action::OutputNumber) {
             writer.write_line("            output: stdout(),")
         } else { Ok(()) })
 
-        .and_then(|_| if used_actions.contains(&action::InputChar) || used_actions.contains(&action::InputNumber) {
+        .and_then(|_| if used_actions.contains(&action::Action::InputChar) || used_actions.contains(&action::Action::InputNumber) {
             writer.write_line("            input: stdin(),")
         } else { Ok(()) })
 
-        .and_then(|_| if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
+        .and_then(|_| if used_actions.contains(&action::Action::TableGet) || used_actions.contains(&action::Action::TablePut) {
             writer.write_line("            table: HashMap::new(),")
         } else { Ok(()) })
 
@@ -711,7 +711,7 @@ fn main() {
                 })))
 
                 .and_then(|_| self.write_end(&mut writer))
-                .map_err(|_| error::OutputError)
+                .map_err(|_| error::ParserError::OutputError)
             },
                 
             None => {
@@ -725,7 +725,7 @@ fn main() {
                 })))
 
                 .and_then(|_| self.write_end(&mut writer))
-                .map_err(|_| error::OutputError)
+                .map_err(|_| error::ParserError::OutputError)
             }
         }
     }
@@ -733,7 +733,7 @@ fn main() {
 
 fn exit(err: ParserError) {
     let mut out = stderr();
-    if write!(out, "Error: {}\n", err).is_err() {
+    if out.write_line(format!("Error: {}", err).as_slice()).is_err() {
         panic!("Error reporting error")
     }
 }

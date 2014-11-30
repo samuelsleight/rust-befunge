@@ -30,20 +30,20 @@ pub enum Action {
 impl Action {
     pub fn write_to<W: Writer>(&self, writer: &mut W) -> Result<(), IoError> {
         match self {
-            &PushChar(c) => writer.write_line(format!("        self.stack.push('{}' as int);", c).as_slice()),
-            &PushNumber(n) => writer.write_line(format!("        self.stack.push({});", n).as_slice()),
-            &OutputChar => writer.write_line("        self.output_char();"),
-            &OutputNumber => writer.write_line("        self.output_number();"),
-            &InputChar => writer.write_line("        self.input_char();"),
-            &Duplicate => writer.write_line("        self.duplicate();"),
-            &Add => writer.write_line("        self.add();"),
-            &Subtract => writer.write_line("        self.subtract();"),
-            &Multiply => writer.write_line("        self.multiply();"),
-            &Divide => writer.write_line("        self.divide();"),
-            &Pop => writer.write_line("        self.stack.pop();"),
-            &Swap => writer.write_line("        self.swap();"),
+            &Action::PushChar(c) => writer.write_line(format!("        self.stack.push('{}' as int);", c).as_slice()),
+            &Action::PushNumber(n) => writer.write_line(format!("        self.stack.push({});", n).as_slice()),
+            &Action::OutputChar => writer.write_line("        self.output_char();"),
+            &Action::OutputNumber => writer.write_line("        self.output_number();"),
+            &Action::InputChar => writer.write_line("        self.input_char();"),
+            &Action::Duplicate => writer.write_line("        self.duplicate();"),
+            &Action::Add => writer.write_line("        self.add();"),
+            &Action::Subtract => writer.write_line("        self.subtract();"),
+            &Action::Multiply => writer.write_line("        self.multiply();"),
+            &Action::Divide => writer.write_line("        self.divide();"),
+            &Action::Pop => writer.write_line("        self.stack.pop();"),
+            &Action::Swap => writer.write_line("        self.swap();"),
 
-            &Random(u, d, l, r) => {
+            &Action::Random(u, d, l, r) => {
                 writer.write_line("        match random::<uint>() % 4 {")
                 .and_then(|_| writer.write_line(format!("            0 => self.state{}(),", u).as_slice()))
                 .and_then(|_| writer.write_line(format!("            1 => self.state{}(),", d).as_slice()))
@@ -53,7 +53,7 @@ impl Action {
                 .and_then(|_| writer.write_line("        }"))
             }
 
-            &Jump(ref v) => {
+            &Action::Jump(ref v) => {
                 writer.write_line("        match self.stack.pop() {")
                 .and_then(|_| writer.write_line(format!("            Some(n) => match modulus(n, {}) {{", v.len()).as_slice()))
                 .and_then(|_| range(0, v.len()).fold(Ok(()), |a, i| a.and_then(|_| writer.write_line(format!("                {} => self.state{}(),", i, v[i]).as_slice()))))
@@ -63,14 +63,14 @@ impl Action {
                 .and_then(|_| writer.write_line("        }"))
             },
 
-            &If(t, f) => {
+            &Action::If(t, f) => {
                 writer.write_line("        match self.stack.pop() {")
                 .and_then(|_| writer.write_line(format!("            Some(0) | None => self.state{}(),", f).as_slice()))
                 .and_then(|_| writer.write_line(format!("            Some(_) => self.state{}(),", t).as_slice()))
                 .and_then(|_| writer.write_line("        }"))
             },
 
-            &Compare(s, l, r) => {
+            &Action::Compare(s, l, r) => {
                 writer.write_line("        match (self.stack.pop(), self.stack.pop()) {")
                 .and_then(|_| writer.write_line(format!("            (Some(a), Some(b)) if a < b => self.state{}(),", l).as_slice()))
                 .and_then(|_| writer.write_line(format!("            (Some(a), Some(b)) if a > b => self.state{}(),", r).as_slice()))
@@ -80,14 +80,14 @@ impl Action {
                 .and_then(|_| writer.write_line("        }"))
             },
 
-            &CallState(s) => writer.write_line(format!("        self.state{}()", s).as_slice()),
+            &Action::CallState(s) => writer.write_line(format!("        self.state{}()", s).as_slice()),
 
-            &Clear => writer.write_line("        self.stack.clear();"),
+            &Action::Clear => writer.write_line("        self.stack.clear();"),
 
-            &End => writer.write_line("        ()"),
+            &Action::End => writer.write_line("        ()"),
 
-            &TableGet => writer.write_line("        self.table_get();"),
-            &TablePut => writer.write_line("        self.table_put();"),
+            &Action::TableGet => writer.write_line("        self.table_get();"),
+            &Action::TablePut => writer.write_line("        self.table_put();"),
 
             _ => Ok(())
         }
@@ -95,7 +95,7 @@ impl Action {
 
     pub fn write_impl_to<W: Writer>(&self, writer: &mut W) -> Result<(), IoError> {
         match self {
-            &Duplicate => {
+            &Action::Duplicate => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn duplicate(&mut self) {"))
                 .and_then(|_| writer.write_line("        match self.stack.pop() {"))
@@ -108,7 +108,7 @@ impl Action {
                 .and_then(|_| writer.write_line("    }"))
             },
 
-            &Add => {
+            &Action::Add => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn add(&mut self) {"))
                 .and_then(|_| writer.write_line("        match (self.stack.pop(), self.stack.pop()) {"))
@@ -120,7 +120,7 @@ impl Action {
             },
 
 
-            &Subtract => {
+            &Action::Subtract => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn subtract(&mut self) {"))
                 .and_then(|_| writer.write_line("        match (self.stack.pop(), self.stack.pop()) {"))
@@ -132,7 +132,7 @@ impl Action {
                 .and_then(|_| writer.write_line("    }"))
             },
 
-            &Multiply => {
+            &Action::Multiply => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn multiply(&mut self) {"))
                 .and_then(|_| writer.write_line("        match (self.stack.pop(), self.stack.pop()) {"))
@@ -142,7 +142,7 @@ impl Action {
                 .and_then(|_| writer.write_line("    }"))
             },
 
-            &Divide => {
+            &Action::Divide => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn divide(&mut self) {"))
                 .and_then(|_| writer.write_line("        match (self.stack.pop(), self.stack.pop()) {"))
@@ -154,7 +154,7 @@ impl Action {
                 .and_then(|_| writer.write_line("    }"))
             },
 
-            &Swap => {
+            &Action::Swap => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn swap(&mut self) {"))
                 .and_then(|_| writer.write_line("        match (self.stack.pop(), self.stack.pop()) {"))
@@ -175,7 +175,7 @@ impl Action {
                 .and_then(|_| writer.write_line("    }"))
             },
 
-            &OutputChar => {
+            &Action::OutputChar => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn output_char(&mut self) {"))
                 .and_then(|_| writer.write_line("        match self.stack.pop() {"))
@@ -187,7 +187,7 @@ impl Action {
                 .and_then(|_| writer.write_line("    }"))
             },
 
-            &OutputNumber => {
+            &Action::OutputNumber => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn output_number(&mut self) {"))
                 .and_then(|_| writer.write_line("        match self.stack.pop() {"))
@@ -197,14 +197,14 @@ impl Action {
                 .and_then(|_| writer.write_line("    }"))
             },
     
-            &InputChar => {
+            &Action::InputChar => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn input_char(&mut self) {"))
                 .and_then(|_| writer.write_line("        self.stack.push(self.input.read_char().unwrap() as int);"))
                 .and_then(|_| writer.write_line("    }"))
             },
 
-            &TableGet => {
+            &Action::TableGet => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn table_get(&mut self) {"))
                 .and_then(|_| writer.write_line("        match(self.stack.pop(), self.stack.pop()) {"))
@@ -248,7 +248,7 @@ impl Action {
                 .and_then(|_| writer.write_line("    }"))
             },
 
-            &TablePut => {
+            &Action::TablePut => {
                 writer.write_line("")
                 .and_then(|_| writer.write_line("    fn table_put(&mut self) {"))
                 .and_then(|_| writer.write_line("        match(self.stack.pop(), self.stack.pop()) {"))
