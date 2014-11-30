@@ -11,7 +11,7 @@ fn compilation_test(bf: &str, file: &str, expected: &str, vars: bool, inv: bool)
     {
         let mut bf_file = File::create(&Path::new(bf_filename.as_slice()));
         match bf_file.write_line(bf) {
-            Err(e) => fail!("Error creating test befunge: {}", e),
+            Err(e) => panic!("Error creating test befunge: {}", e),
             _ => ()
         }
     }
@@ -20,7 +20,7 @@ fn compilation_test(bf: &str, file: &str, expected: &str, vars: bool, inv: bool)
     match p.parse(&bf_filename.to_string()) {
         Err(e) => {
             clean_files(file);
-            fail!("Error parsing befunge: {}", e)
+            panic!("Error parsing befunge: {}", e)
         },
         _ => ()
     }
@@ -28,7 +28,7 @@ fn compilation_test(bf: &str, file: &str, expected: &str, vars: bool, inv: bool)
     match Command::new("rustc").arg(rs_filename.as_slice()).output() {
         Err(e) => {
             clean_files(file);
-            fail!("Compilation process error: {}", e)
+            panic!("Compilation process error: {}", e)
         },
 
         _ => ()
@@ -39,7 +39,7 @@ fn compilation_test(bf: &str, file: &str, expected: &str, vars: bool, inv: bool)
 
         Err(e) => {
             clean_files(file);
-            fail!("Error running compiled program: {}", e)
+            panic!("Error running compiled program: {}", e)
         }
     }
 

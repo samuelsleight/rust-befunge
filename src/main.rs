@@ -3,7 +3,7 @@
 use std::os;
 use std::vec::Vec;
 use std::collections::{HashMap, TreeSet};
-use std::collections::hashmap::{Vacant, Occupied};
+use std::collections::hash_map::{Vacant, Occupied};
 use std::io::{BufferedReader, File, IoError};
 use std::io::stdio::{stdout, stderr};
 
@@ -114,7 +114,8 @@ impl Parser {
             }
 
             let mut ip = ip_queue[state].clone();
-            if let Vacant(entry) = states.get_mut(ip.y as uint).get_mut(ip.x as uint).entry(ip.delta()) {
+            if let Vacant(entry) = states[ip.y as uint][ip.x as uint].entry(ip.delta()) {
+            //if let Vacant(entry) = states[ip.y as uint][ip.x as uint].entry(ip.delta()) {
                 entry.set(state);
             }
 
@@ -126,14 +127,14 @@ impl Parser {
                     match code[ip.y as uint][ip.x as uint] {
                         '"' => stringmode = false,
                         c => { 
-                            actions.get_mut(state).push(action::PushChar(c));
+                            actions[state].push(action::PushChar(c));
                             used_actions.insert(action::PushChar(' '));
                         }
                     }
                 } else {
-                    match states.get_mut(ip.y as uint).get_mut(ip.x as uint).find(&ip.delta()) {
+                    match states[ip.y as uint][ip.x as uint].get(&ip.delta()) {
                         Some(s) if !first => {
-                            actions.get_mut(state).push(action::CallState(*s));
+                            actions[state].push(action::CallState(*s));
                             used_actions.insert(action::CallState(0));
                             break
                         }
@@ -155,176 +156,176 @@ impl Parser {
                         '"' => stringmode = true,
 
                         c @ '0' ... '9' => { 
-                            actions.get_mut(state).push(action::PushNumber(c.to_digit(10).unwrap() as int));
+                            actions[state].push(action::PushNumber(c.to_digit(10).unwrap() as int));
                             used_actions.insert(action::PushNumber(0));
                         },
 
                         c @ 'a' ... 'f' => {
-                            actions.get_mut(state).push(action::PushNumber(c.to_digit(16).unwrap() as int));
+                            actions[state].push(action::PushNumber(c.to_digit(16).unwrap() as int));
                             used_actions.insert(action::PushNumber(0));
                         },
 
                         '~' => {
-                            actions.get_mut(state).push(action::InputChar);
+                            actions[state].push(action::InputChar);
                             used_actions.insert(action::InputChar);
                         },
 
                         ',' => {
-                            actions.get_mut(state).push(action::OutputChar);
+                            actions[state].push(action::OutputChar);
                             used_actions.insert(action::OutputChar);
                         },
 
                         '.' => {
-                            actions.get_mut(state).push(action::OutputNumber);
+                            actions[state].push(action::OutputNumber);
                             used_actions.insert(action::OutputNumber);
                         },
 
                         '+' => {
                             if self.opt_eval {
-                                match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
-                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(a + b)),
+                                match (actions[state].pop(), actions[state].pop()) {
+                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(a + b)),
                                     (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
-                                  | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions.get_mut(state).push(action::PushNumber(n + (c as int))),
-                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(a as int + b as int)),
+                                  | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions[state].push(action::PushNumber(n + (c as int))),
+                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber(a as int + b as int)),
 
                                     (Some(a), Some(b)) => {
-                                        actions.get_mut(state).push(b);
-                                        actions.get_mut(state).push(a);
-                                        actions.get_mut(state).push(action::Add);
+                                        actions[state].push(b);
+                                        actions[state].push(a);
+                                        actions[state].push(action::Add);
                                         used_actions.insert(action::Add);
                                     },
 
                                     (None, Some(a)) | (Some(a), None) => {
-                                        actions.get_mut(state).push(a);
-                                        actions.get_mut(state).push(action::Add);
+                                        actions[state].push(a);
+                                        actions[state].push(action::Add);
                                         used_actions.insert(action::Add);
                                     },
 
                                     (None, None) => {
-                                        actions.get_mut(state).push(action::Add);
+                                        actions[state].push(action::Add);
                                         used_actions.insert(action::Add);
                                     },
                                 }
                             } else {
-                                actions.get_mut(state).push(action::Add);
+                                actions[state].push(action::Add);
                                 used_actions.insert(action::Add);
                             }
                         },
 
                         '*' => {
                             if self.opt_eval {
-                                match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
-                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(a * b)),
+                                match (actions[state].pop(), actions[state].pop()) {
+                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(a * b)),
                                     (Some(action::PushChar(c)), Some(action::PushNumber(n))) 
-                                  | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions.get_mut(state).push(action::PushNumber(n * (c as int))),
-                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(a as int * b as int)),
+                                  | (Some(action::PushNumber(n)), Some(action::PushChar(c))) => actions[state].push(action::PushNumber(n * (c as int))),
+                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber(a as int * b as int)),
 
                                     (Some(a), Some(b)) => {
-                                        actions.get_mut(state).push(b);
-                                        actions.get_mut(state).push(a);
-                                        actions.get_mut(state).push(action::Multiply);
+                                        actions[state].push(b);
+                                        actions[state].push(a);
+                                        actions[state].push(action::Multiply);
                                         used_actions.insert(action::Multiply);
                                     },
 
                                     (None, Some(a)) | (Some(a), None) => {
-                                        actions.get_mut(state).push(a);
-                                        actions.get_mut(state).push(action::Multiply);
+                                        actions[state].push(a);
+                                        actions[state].push(action::Multiply);
                                         used_actions.insert(action::Multiply);
                                     },
 
                                     (None, None) => {
-                                        actions.get_mut(state).push(action::Multiply);
+                                        actions[state].push(action::Multiply);
                                         used_actions.insert(action::Multiply);
                                     },
                                 }
                             } else {
-                                actions.get_mut(state).push(action::Multiply);
+                                actions[state].push(action::Multiply);
                                 used_actions.insert(action::Multiply);
                             }
                         },
 
                         '-' => {
                             if self.opt_eval {
-                                match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
-                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b - a)),
-                                    (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b - (a as int))),
-                                    (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber((b as int) - a)),
-                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(b as int - a as int)),
+                                match (actions[state].pop(), actions[state].pop()) {
+                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(b - a)),
+                                    (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(b - (a as int))),
+                                    (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber((b as int) - a)),
+                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber(b as int - a as int)),
 
                                     (Some(a), Some(b)) => {
-                                        actions.get_mut(state).push(b);
-                                        actions.get_mut(state).push(a);
-                                        actions.get_mut(state).push(action::Subtract);
+                                        actions[state].push(b);
+                                        actions[state].push(a);
+                                        actions[state].push(action::Subtract);
                                         used_actions.insert(action::Subtract);
                                     },
 
                                     (None, Some(a)) | (Some(a), None) => {
-                                        actions.get_mut(state).push(a);
-                                        actions.get_mut(state).push(action::Subtract);
+                                        actions[state].push(a);
+                                        actions[state].push(action::Subtract);
                                         used_actions.insert(action::Subtract);
                                     },
 
                                     (None, None) => {
-                                        actions.get_mut(state).push(action::Subtract);
+                                        actions[state].push(action::Subtract);
                                         used_actions.insert(action::Subtract);
                                     },
                                 }
                             } else {
-                                actions.get_mut(state).push(action::Subtract);
+                                actions[state].push(action::Subtract);
                                 used_actions.insert(action::Subtract);
                             }
                         },
 
                         '/' => {
                             if self.opt_eval {
-                                match (actions.get_mut(state).pop(), actions.get_mut(state).pop()) {
-                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b / a)),
-                                    (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions.get_mut(state).push(action::PushNumber(b / (a as int))),
-                                    (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber((b as int) / a)),
-                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions.get_mut(state).push(action::PushNumber(b as int / a as int)),
+                                match (actions[state].pop(), actions[state].pop()) {
+                                    (Some(action::PushNumber(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(b / a)),
+                                    (Some(action::PushChar(a)), Some(action::PushNumber(b))) => actions[state].push(action::PushNumber(b / (a as int))),
+                                    (Some(action::PushNumber(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber((b as int) / a)),
+                                    (Some(action::PushChar(a)), Some(action::PushChar(b))) => actions[state].push(action::PushNumber(b as int / a as int)),
 
                                     (Some(a), Some(b)) => {
-                                        actions.get_mut(state).push(b);
-                                        actions.get_mut(state).push(a);
-                                        actions.get_mut(state).push(action::Divide);
+                                        actions[state].push(b);
+                                        actions[state].push(a);
+                                        actions[state].push(action::Divide);
                                         used_actions.insert(action::Divide);
                                     },
 
                                     (None, Some(a)) | (Some(a), None) => {
-                                        actions.get_mut(state).push(a);
-                                        actions.get_mut(state).push(action::Divide);
+                                        actions[state].push(a);
+                                        actions[state].push(action::Divide);
                                         used_actions.insert(action::Divide);
                                     },
 
                                     (None, None) => {
-                                        actions.get_mut(state).push(action::Divide);
+                                        actions[state].push(action::Divide);
                                         used_actions.insert(action::Divide);
                                     },
                                 }
                             } else {
-                                actions.get_mut(state).push(action::Divide);
+                                actions[state].push(action::Divide);
                                 used_actions.insert(action::Divide);
                             }
                         },
 
                         ':' => {
-                            actions.get_mut(state).push(action::Duplicate);
+                            actions[state].push(action::Duplicate);
                             used_actions.insert(action::Duplicate);
                         },
 
                         '$' => {
-                            actions.get_mut(state).push(action::Pop);
+                            actions[state].push(action::Pop);
                             used_actions.insert(action::Pop);
                         },
 
                         '\\' => {
-                            actions.get_mut(state).push(action::Swap);
+                            actions[state].push(action::Swap);
                             used_actions.insert(action::Swap);
                         },
 
                         '\'' => {
                             ip.advance(width, height);
-                            actions.get_mut(state).push(action::PushChar(code[ip.y as uint][ip.x as uint]));
+                            actions[state].push(action::PushChar(code[ip.y as uint][ip.x as uint]));
                             used_actions.insert(action::PushChar(' '));
                         },
 
@@ -334,7 +335,7 @@ impl Parser {
                             let new_left = ip.new_left(width, height);
                             let new_right = ip.new_right(width, height);
 
-                            let up_state = match states.get_mut(new_up.y as uint).get_mut(new_up.x as uint).entry(new_up.delta()) {
+                            let up_state = match states[new_up.y as uint][new_up.x as uint].entry(new_up.delta()) {
                                 Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(new_up);
@@ -346,7 +347,7 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            let down_state = match states.get_mut(new_down.y as uint).get_mut(new_down.x as uint).entry(new_down.delta()) {
+                            let down_state = match states[new_down.y as uint][new_down.x as uint].entry(new_down.delta()) {
                                 Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(new_down);
@@ -358,7 +359,7 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            let left_state = match states.get_mut(new_left.y as uint).get_mut(new_left.x as uint).entry(new_left.delta()) {
+                            let left_state = match states[new_left.y as uint][new_left.x as uint].entry(new_left.delta()) {
                                 Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(new_left);
@@ -370,7 +371,7 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            let right_state = match states.get_mut(new_right.y as uint).get_mut(new_right.x as uint).entry(new_right.delta()) {
+                            let right_state = match states[new_right.y as uint][new_right.x as uint].entry(new_right.delta()) {
                                 Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(new_right);
@@ -382,13 +383,13 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            actions.get_mut(state).push(action::Random(up_state, down_state, left_state, right_state));
+                            actions[state].push(action::Random(up_state, down_state, left_state, right_state));
                             used_actions.insert(action::Random(0, 0, 0, 0));
                             break;
                         }
 
                         'j' => {
-                            match actions.get_mut(state).pop() {
+                            match actions[state].pop() {
                                 Some(action::PushNumber(n)) if self.opt_j_eval => {
                                     let mut new_ip = ip.clone();
                                     let mut r = range(0, n + 1);
@@ -402,7 +403,7 @@ impl Parser {
                                         new_ip.advance(width, height);
                                     }
 
-                                    let new_state = match states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).entry(new_ip.delta()) {
+                                    let new_state = match states[new_ip.y as uint][new_ip.x as uint].entry(new_ip.delta()) {
                                         Vacant(entry) => {
                                             entry.set(next_state);
                                             ip_queue.push(new_ip);
@@ -414,7 +415,7 @@ impl Parser {
                                         Occupied(entry) => *entry.into_mut()
                                     };
 
-                                    actions.get_mut(state).push(action::CallState(new_state));
+                                    actions[state].push(action::CallState(new_state));
                                     used_actions.insert(action::CallState(0));
                                     break;
                                 },
@@ -433,7 +434,7 @@ impl Parser {
                                         new_ip.advance(width, height);
                                     }
 
-                                    let new_state = match states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).entry(new_ip.delta()) {
+                                    let new_state = match states[new_ip.y as uint][new_ip.x as uint].entry(new_ip.delta()) {
                                         Vacant(entry) => {
                                             entry.set(next_state);
                                             ip_queue.push(new_ip);
@@ -445,13 +446,13 @@ impl Parser {
                                         Occupied(entry) => *entry.into_mut()
                                     };
 
-                                    actions.get_mut(state).push(action::CallState(new_state));
+                                    actions[state].push(action::CallState(new_state));
                                     used_actions.insert(action::CallState(0));
                                     break;
                                 },
 
                                 act => {
-                                    act.map(|a| actions.get_mut(state).push(a));
+                                    act.map(|a| actions[state].push(a));
 
                                     let mut new_ip = ip.clone();
                                     let mut jump_vec = Vec::new();
@@ -459,7 +460,7 @@ impl Parser {
                                     loop {
                                         new_ip.advance(width, height);
 
-                                        let new_state = match states.get_mut(new_ip.y as uint).get_mut(new_ip.x as uint).entry(new_ip.delta()) {
+                                        let new_state = match states[new_ip.y as uint][new_ip.x as uint].entry(new_ip.delta()) {
                                             Vacant(entry) => {
                                                 entry.set(next_state);
                                                 ip_queue.push(new_ip);
@@ -477,7 +478,7 @@ impl Parser {
                                         }
                                     };
 
-                                    actions.get_mut(state).push(action::Jump(jump_vec));
+                                    actions[state].push(action::Jump(jump_vec));
                                     used_actions.insert(action::Jump(Vec::new()));
                                     break
                                 }
@@ -488,7 +489,7 @@ impl Parser {
                             let true_ip = if c == '_' { ip.new_left(width, height) } else { ip.new_up(width, height) };
                             let false_ip = if c == '_' { ip.new_right(width, height) } else { ip.new_down(width, height) };
 
-                            let true_state = match states.get_mut(true_ip.y as uint).get_mut(true_ip.x as uint).entry(true_ip.delta()) {
+                            let true_state = match states[true_ip.y as uint][true_ip.x as uint].entry(true_ip.delta()) {
                                 Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(true_ip);
@@ -500,7 +501,7 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            let false_state = match states.get_mut(false_ip.y as uint).get_mut(false_ip.x as uint).entry(false_ip.delta()) {
+                            let false_state = match states[false_ip.y as uint][false_ip.x as uint].entry(false_ip.delta()) {
                                 Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(false_ip);
@@ -512,7 +513,7 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            actions.get_mut(state).push(action::If(true_state, false_state));
+                            actions[state].push(action::If(true_state, false_state));
                             used_actions.insert(action::If(0, 0));
                             break
                         },
@@ -522,7 +523,7 @@ impl Parser {
                             let l_ip = ip.new_turn_left(width, height);
                             let r_ip = ip.new_turn_right(width, height);
 
-                            let s_state = match states.get_mut(s_ip.y as uint).get_mut(s_ip.x as uint).entry(s_ip.delta()) {
+                            let s_state = match states[s_ip.y as uint][s_ip.x as uint].entry(s_ip.delta()) {
                                 Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(s_ip);
@@ -534,7 +535,7 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            let l_state = match states.get_mut(l_ip.y as uint).get_mut(l_ip.x as uint).entry(l_ip.delta()) {
+                            let l_state = match states[l_ip.y as uint][l_ip.x as uint].entry(l_ip.delta()) {
                                 Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(l_ip);
@@ -546,7 +547,7 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            let r_state = match states.get_mut(r_ip.y as uint).get_mut(r_ip.x as uint).entry(r_ip.delta()) {
+                            let r_state = match states[r_ip.y as uint][r_ip.x as uint].entry(r_ip.delta()) {
                                 Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(r_ip);
@@ -558,25 +559,25 @@ impl Parser {
                                 Occupied(entry) => *entry.into_mut()
                             };
 
-                            actions.get_mut(state).push(action::Compare(s_state, l_state, r_state));
+                            actions[state].push(action::Compare(s_state, l_state, r_state));
                             used_actions.insert(action::Compare(0, 0, 0));
                             break
                         },
 
                         'n' => {
-                            actions.get_mut(state).push(action::Clear);
+                            actions[state].push(action::Clear);
                             used_actions.insert(action::Clear);
                         },
 
                         '@' => {
-                            actions.get_mut(state).push(action::End);
+                            actions[state].push(action::End);
                             used_actions.insert(action::End);
                             break
                         },
 
                         'p' => {
                             if self.vars_enabled {
-                                actions.get_mut(state).push(action::TablePut);
+                                actions[state].push(action::TablePut);
                                 used_actions.insert(action::TablePut);
                             } else {
                                 return Err(error::VarsDisabled)
@@ -585,7 +586,7 @@ impl Parser {
 
                         'g' => {
                             if self.vars_enabled {
-                                actions.get_mut(state).push(action::TableGet);
+                                actions[state].push(action::TableGet);
                                 used_actions.insert(action::TableGet);
                             } else {
                                 return Err(error::VarsDisabled)
@@ -629,6 +630,7 @@ impl Parser {
 
         .and_then(|_| if used_actions.contains(&action::TableGet) || used_actions.contains(&action::TablePut) {
             writer.write_line("use std::collections::HashMap;")
+            .and_then(|_| writer.write_line("use std::collections::hash_map::{Vacant, Occupied};"))
         } else { Ok(()) })
 
         .and_then(|_| if used_actions.contains(&action::Random(0, 0, 0, 0)) {
@@ -732,7 +734,7 @@ fn main() {
 fn exit(err: ParserError) {
     let mut out = stderr();
     if write!(out, "Error: {}\n", err).is_err() {
-        fail!("Error reporting error")
+        panic!("Error reporting error")
     }
 }
 
