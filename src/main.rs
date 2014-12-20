@@ -1,5 +1,3 @@
-#![feature(if_let)]
-
 use std::os;
 use std::vec::Vec;
 use std::collections::{HashMap, TreeSet};
