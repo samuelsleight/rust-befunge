@@ -1,7 +1,7 @@
 use std::os;
 use std::vec::Vec;
-use std::collections::{HashMap, TreeSet};
-use std::collections::hash_map::{Vacant, Occupied};
+use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::Entry;
 use std::io::{BufferedReader, File, IoError};
 use std::io::stdio::{stdout, stderr};
 
@@ -86,7 +86,7 @@ impl Parser {
         }
     }
 
-    fn parse_code(&self, code: Vec<Vec<char>>) -> Result<(Vec<Vec<action::Action>>, TreeSet<action::Action>), ParserError> {
+    fn parse_code(&self, code: Vec<Vec<char>>) -> Result<(Vec<Vec<action::Action>>, HashSet<action::Action>), ParserError> {
         let mut ip_queue = vec![IP::new(0, 0, 1, 0)];
 
         let width = code[0].len();
@@ -100,7 +100,7 @@ impl Parser {
         });
 
         let mut actions = Vec::new();
-        let mut used_actions = TreeSet::new();
+        let mut used_actions = HashSet::new();
 
         let mut stringmode = false;
         let mut state = 0u;
@@ -112,8 +112,8 @@ impl Parser {
             }
 
             let mut ip = ip_queue[state].clone();
-            if let Vacant(entry) = states[ip.y as uint][ip.x as uint].entry(ip.delta()) {
-            //if let Vacant(entry) = states[ip.y as uint][ip.x as uint].entry(ip.delta()) {
+            if let Entry::Vacant(entry) = states[ip.y as uint][ip.x as uint].entry(ip.delta()) {
+            //if let Entry::Vacant(entry) = states[ip.y as uint][ip.x as uint].entry(ip.delta()) {
                 entry.set(state);
             }
 
@@ -334,7 +334,7 @@ impl Parser {
                             let new_right = ip.new_right(width, height);
 
                             let up_state = match states[new_up.y as uint][new_up.x as uint].entry(new_up.delta()) {
-                                Vacant(entry) => {
+                                Entry::Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(new_up);
                                     next_state += 1;
@@ -342,11 +342,11 @@ impl Parser {
                                     next_state - 1
                                 },
 
-                                Occupied(entry) => *entry.into_mut()
+                                Entry::Occupied(entry) => *entry.into_mut()
                             };
 
                             let down_state = match states[new_down.y as uint][new_down.x as uint].entry(new_down.delta()) {
-                                Vacant(entry) => {
+                                Entry::Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(new_down);
                                     next_state += 1;
@@ -354,11 +354,11 @@ impl Parser {
                                     next_state - 1
                                 },
 
-                                Occupied(entry) => *entry.into_mut()
+                                Entry::Occupied(entry) => *entry.into_mut()
                             };
 
                             let left_state = match states[new_left.y as uint][new_left.x as uint].entry(new_left.delta()) {
-                                Vacant(entry) => {
+                                Entry::Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(new_left);
                                     next_state += 1;
@@ -366,11 +366,11 @@ impl Parser {
                                     next_state - 1
                                 },
 
-                                Occupied(entry) => *entry.into_mut()
+                                Entry::Occupied(entry) => *entry.into_mut()
                             };
 
                             let right_state = match states[new_right.y as uint][new_right.x as uint].entry(new_right.delta()) {
-                                Vacant(entry) => {
+                                Entry::Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(new_right);
                                     next_state += 1;
@@ -378,7 +378,7 @@ impl Parser {
                                     next_state - 1
                                 },
 
-                                Occupied(entry) => *entry.into_mut()
+                                Entry::Occupied(entry) => *entry.into_mut()
                             };
 
                             actions[state].push(action::Action::Random(up_state, down_state, left_state, right_state));
@@ -402,7 +402,7 @@ impl Parser {
                                     }
 
                                     let new_state = match states[new_ip.y as uint][new_ip.x as uint].entry(new_ip.delta()) {
-                                        Vacant(entry) => {
+                                        Entry::Vacant(entry) => {
                                             entry.set(next_state);
                                             ip_queue.push(new_ip);
                                             next_state += 1;
@@ -410,7 +410,7 @@ impl Parser {
                                             next_state - 1
                                         },
 
-                                        Occupied(entry) => *entry.into_mut()
+                                        Entry::Occupied(entry) => *entry.into_mut()
                                     };
 
                                     actions[state].push(action::Action::CallState(new_state));
@@ -433,7 +433,7 @@ impl Parser {
                                     }
 
                                     let new_state = match states[new_ip.y as uint][new_ip.x as uint].entry(new_ip.delta()) {
-                                        Vacant(entry) => {
+                                        Entry::Vacant(entry) => {
                                             entry.set(next_state);
                                             ip_queue.push(new_ip);
                                             next_state += 1;
@@ -441,7 +441,7 @@ impl Parser {
                                             next_state - 1
                                         },
 
-                                        Occupied(entry) => *entry.into_mut()
+                                        Entry::Occupied(entry) => *entry.into_mut()
                                     };
 
                                     actions[state].push(action::Action::CallState(new_state));
@@ -459,7 +459,7 @@ impl Parser {
                                         new_ip.advance(width, height);
 
                                         let new_state = match states[new_ip.y as uint][new_ip.x as uint].entry(new_ip.delta()) {
-                                            Vacant(entry) => {
+                                            Entry::Vacant(entry) => {
                                                 entry.set(next_state);
                                                 ip_queue.push(new_ip);
                                                 next_state += 1;
@@ -467,7 +467,7 @@ impl Parser {
                                                 next_state - 1
                                             },
 
-                                            Occupied(entry) => *entry.into_mut()
+                                            Entry::Occupied(entry) => *entry.into_mut()
                                         };
                                         jump_vec.push(new_state);
 
@@ -488,7 +488,7 @@ impl Parser {
                             let false_ip = if c == '_' { ip.new_right(width, height) } else { ip.new_down(width, height) };
 
                             let true_state = match states[true_ip.y as uint][true_ip.x as uint].entry(true_ip.delta()) {
-                                Vacant(entry) => {
+                                Entry::Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(true_ip);
                                     next_state += 1;
@@ -496,11 +496,11 @@ impl Parser {
                                     next_state - 1
                                 },
 
-                                Occupied(entry) => *entry.into_mut()
+                                Entry::Occupied(entry) => *entry.into_mut()
                             };
 
                             let false_state = match states[false_ip.y as uint][false_ip.x as uint].entry(false_ip.delta()) {
-                                Vacant(entry) => {
+                                Entry::Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(false_ip);
                                     next_state += 1;
@@ -508,7 +508,7 @@ impl Parser {
                                     next_state - 1
                                 },
 
-                                Occupied(entry) => *entry.into_mut()
+                                Entry::Occupied(entry) => *entry.into_mut()
                             };
 
                             actions[state].push(action::Action::If(true_state, false_state));
@@ -522,7 +522,7 @@ impl Parser {
                             let r_ip = ip.new_turn_right(width, height);
 
                             let s_state = match states[s_ip.y as uint][s_ip.x as uint].entry(s_ip.delta()) {
-                                Vacant(entry) => {
+                                Entry::Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(s_ip);
                                     next_state += 1;
@@ -530,11 +530,11 @@ impl Parser {
                                     next_state - 1
                                 },
 
-                                Occupied(entry) => *entry.into_mut()
+                                Entry::Occupied(entry) => *entry.into_mut()
                             };
 
                             let l_state = match states[l_ip.y as uint][l_ip.x as uint].entry(l_ip.delta()) {
-                                Vacant(entry) => {
+                                Entry::Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(l_ip);
                                     next_state += 1;
@@ -542,11 +542,11 @@ impl Parser {
                                     next_state - 1
                                 },
 
-                                Occupied(entry) => *entry.into_mut()
+                                Entry::Occupied(entry) => *entry.into_mut()
                             };
 
                             let r_state = match states[r_ip.y as uint][r_ip.x as uint].entry(r_ip.delta()) {
-                                Vacant(entry) => {
+                                Entry::Vacant(entry) => {
                                     entry.set(next_state);
                                     ip_queue.push(r_ip);
                                     next_state += 1;
@@ -554,7 +554,7 @@ impl Parser {
                                     next_state - 1
                                 },
 
-                                Occupied(entry) => *entry.into_mut()
+                                Entry::Occupied(entry) => *entry.into_mut()
                             };
 
                             actions[state].push(action::Action::Compare(s_state, l_state, r_state));
@@ -612,7 +612,7 @@ impl Parser {
         Ok((actions, used_actions))
     }
 
-    fn write_first<W: Writer>(&self, writer: &mut W, used_actions: &TreeSet<action::Action>) -> Result<(), IoError> {
+    fn write_first<W: Writer>(&self, writer: &mut W, used_actions: &HashSet<action::Action>) -> Result<(), IoError> {
         writer.write_line("use std::char;")
         .and_then(|_| writer.write_line("use std::vec::Vec;"))
 
@@ -628,7 +628,7 @@ impl Parser {
 
         .and_then(|_| if used_actions.contains(&action::Action::TableGet) || used_actions.contains(&action::Action::TablePut) {
             writer.write_line("use std::collections::HashMap;")
-            .and_then(|_| writer.write_line("use std::collections::hash_map::{Vacant, Occupied};"))
+            .and_then(|_| writer.write_line("use std::collections::hash_map::Entry;"))
         } else { Ok(()) })
 
         .and_then(|_| if used_actions.contains(&action::Action::Random(0, 0, 0, 0)) {
@@ -696,7 +696,7 @@ fn main() {
 }")
     }
 
-    fn write_output(&self, (actions, used_actions): (Vec<Vec<action::Action>>, TreeSet<action::Action>)) -> Result<(), ParserError> {
+    fn write_output(&self, (actions, used_actions): (Vec<Vec<action::Action>>, HashSet<action::Action>)) -> Result<(), ParserError> {
         match self.output_file {
             Some(ref f) => {
                 let mut writer = File::create(&Path::new(f.clone()));
