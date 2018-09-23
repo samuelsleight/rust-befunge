@@ -1,5 +1,8 @@
 [package]
-
 name = "befunge"
-version = "0.0.1"
-authors = ["Sam Sleight <samuel.sleight@gmail.com>"]
+version = "0.1.0"
+authors = ["Sam Sleight <samuel@sleig.ht>"]
+
+[dependencies]
+structopt = "0.2.10"
+pipeline = { path = "pipeline" }
