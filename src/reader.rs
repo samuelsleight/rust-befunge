@@ -6,11 +6,12 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use error::Error;
+use crate::{
+    error::Error,
+    interpreter::Grid,
+};
 
 use pipeline::Stage;
-
-use interpreter::Grid;
 
 pub struct FileReader<P>(PhantomData<P>);
 

@@ -1,6 +1,6 @@
 use pipeline::Stage;
 
-use error::Error;
+use crate::error::Error;
 
 use std::{
     path::PathBuf,

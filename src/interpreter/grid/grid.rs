@@ -3,8 +3,10 @@ use std::{
     fmt::Debug
 };
 
-use inspector::Inspectable;
-use interpreter::Ip;
+use crate::{
+    inspector::Inspectable,
+    interpreter::Ip,
+};
 
 #[derive(Debug)]
 pub struct Grid<T>(Box<[Box<[T]>]>);

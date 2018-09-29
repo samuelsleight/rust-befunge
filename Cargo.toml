@@ -1,7 +1,11 @@
+cargo-features = ["edition"]
+
 [package]
 name = "befunge"
 version = "0.1.0"
 authors = ["Sam Sleight <samuel@sleig.ht>"]
+
+edition = "2018"
 
 [dependencies]
 structopt = "0.2.10"

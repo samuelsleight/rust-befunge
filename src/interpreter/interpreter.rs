@@ -1,8 +1,13 @@
 use pipeline::Stage;
-use error::Error;
-use interpreter::grid::Grid;
-use interpreter::grid::Ip;
-use interpreter::grid::Delta;
+
+use crate::{
+    error::Error,
+    interpreter::grid::{
+        Grid,
+        Ip,
+        Delta,
+    }
+};
 
 pub struct Interpreter {}
 

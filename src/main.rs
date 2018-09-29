@@ -1,15 +1,14 @@
-extern crate structopt;
-extern crate pipeline;
-
 use std::path::PathBuf;
 
 use structopt::StructOpt;
 
 use pipeline::{Err, Pipeline, RunPipeline};
 
-use inspector::{Inspector};
-use reader::FileReader;
-use interpreter::Interpreter;
+use crate::{
+    inspector::Inspector,
+    reader::FileReader,
+    interpreter::Interpreter,
+};
 
 mod error;
 mod inspector;
