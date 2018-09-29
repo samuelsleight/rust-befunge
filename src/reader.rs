@@ -10,7 +10,7 @@ use error::Error;
 
 use pipeline::Stage;
 
-use grid::Grid;
+use interpreter::Grid;
 
 pub struct FileReader<P>(PhantomData<P>);
 
