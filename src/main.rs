@@ -30,7 +30,7 @@ fn main() {
     let result = pipeline
         ::pipeline(FileReader::new(), |_| ())
         .and_then(Inspector::new(options.debug_file), |_| ())
-        .and_then(Interpreter::new(), |_| ())
+        .and_then(Interpreter::stage(), |_| ())
         .run(options.filename);
 
     if let Err(Err::Err(e)) = result {
