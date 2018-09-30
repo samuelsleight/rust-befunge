@@ -5,7 +5,6 @@ use crate::error::Error;
 use std::{
     path::PathBuf,
     marker::PhantomData,
-    fmt::Debug
 };
 
 pub struct Inspector<T> {
@@ -22,13 +21,15 @@ impl<T> Inspector<T> {
     }
 }
 
-pub trait Inspectable: Debug {
+pub trait Inspectable {
+    fn inspect(&self);
+}
+
+impl Inspectable for PathBuf {
     fn inspect(&self) {
         println!("{:#?}", self);
     }
 }
-
-impl Inspectable for PathBuf {}
 
 impl<T> Stage<Error> for Inspector<T> where T: Inspectable {
     type Input = T;

@@ -4,9 +4,9 @@ cargo-features = ["edition"]
 name = "befunge"
 version = "0.1.0"
 authors = ["Sam Sleight <samuel@sleig.ht>"]
-
 edition = "2018"
 
 [dependencies]
 structopt = "0.2.10"
+llvm-sys = "70"
 pipeline = { path = "pipeline" }
