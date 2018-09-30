@@ -12,7 +12,11 @@ impl Interpreter {
 }
 
 impl InterpreterCallback for Interpreter {
+    type End = ();
+
     fn output(&mut self, c: char) {
         print!("{}", c);
     }
+
+    fn end(&mut self) {}
 }

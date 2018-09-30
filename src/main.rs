@@ -1,3 +1,5 @@
+extern crate pipeline;
+
 use std::path::PathBuf;
 
 use structopt::StructOpt;
@@ -8,30 +10,49 @@ use crate::{
     inspector::Inspector,
     reader::FileReader,
     interpreter::Interpreter,
+    compiler::Compiler,
 };
 
 mod error;
 mod inspector;
 mod reader;
 mod interpreter;
+mod compiler;
 
 #[derive(Debug, StructOpt)]
 struct Options {
     #[structopt(required = true, parse(from_os_str))]
     filename: PathBuf,
 
+    #[structopt(long = "interpret", short = "i")]
+    interpret: bool,
+
     #[structopt(long = "debug-file")]
     debug_file: bool,
+
+    #[structopt(long = "debug-ir")]
+    debug_ir: bool,
 }
 
 fn main() {
     let options = Options::from_args();
 
-    let result = pipeline
+    let pipe = pipeline
         ::pipeline(FileReader::new(), |_| ())
-        .and_then(Inspector::new(options.debug_file), |_| ())
-        .and_then(Interpreter::stage(), |_| ())
-        .run(options.filename);
+        .and_then(Inspector::new(options.debug_file), |_| ());
+
+    let result = if options.interpret {
+        pipe
+            .and_then(Interpreter::stage(), |_| ())
+            .run(options.filename)
+    }
+    else {
+        pipe
+            .and_then(Compiler::new(), |_| ())
+            .and_then(Inspector::new(options.debug_ir), |_| ())
+            .run(options.filename)
+            .map(|_| ())
+    };
 
     if let Err(Err::Err(e)) = result {
         println!("{}", e)

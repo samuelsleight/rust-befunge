@@ -3,6 +3,7 @@ use pipeline::Stage;
 use crate::{
     error::Error,
     interpreter::{
+        Error as InterpreterError,
         core::InterpreterCallback,
         grid::{
             Grid,
@@ -77,7 +78,7 @@ impl State {
 
 impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: InterpreterCallback {
     type Input = Grid<char>;
-    type Output = ();
+    type Output = Callback::End;
 
     fn run(mut self, input: Self::Input) -> Result<Self::Output, Error> {
         let mut state = State::new(input);
@@ -124,13 +125,13 @@ impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: Interp
                 ',' => self.callback.output(state.pop() as u8 as char),
 
                 // End
-                '@' => return Ok(()),
+                '@' => return Ok(self.callback.end()),
 
                 _ => unimplemented!()
             }
         }
 
-        Ok(())
+        Err(Error::Interpreter(InterpreterError::EOF))
     }
 }
 
