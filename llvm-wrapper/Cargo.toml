@@ -1,0 +1,10 @@
+cargo-features = ["edition"]
+
+[package]
+name = "llvm-wrapper"
+version = "0.1.0"
+authors = ["Samuel Sleight <samuel.sleight@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+llvm-sys = "70"

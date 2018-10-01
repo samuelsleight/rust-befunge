@@ -23,6 +23,14 @@ impl Block {
             end
         }
     }
+
+    pub fn actions(&self) -> &[Action] {
+        &self.actions
+    }
+
+    pub fn end(&self) -> &End {
+        &self.end
+    }
 }
 
 impl Inspectable for Vec<Block> {

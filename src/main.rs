@@ -1,3 +1,5 @@
+extern crate llvm_wrapper;
+
 use std::path::PathBuf;
 
 use structopt::StructOpt;

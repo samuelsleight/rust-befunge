@@ -1,5 +1,9 @@
 use std::{
     path::Path,
+    fmt::{
+        Debug,
+        Formatter,
+        self},
     ffi::{
         CStr, 
         CString
@@ -12,23 +16,28 @@ use llvm_sys::{
         LLVMModuleCreateWithName,
         LLVMSetSourceFileName,
         LLVMPrintModuleToString,
+        LLVMAddFunction,
         LLVMDisposeModule,
         LLVMDisposeMessage,
     },
 };
 
-use crate::inspector::Inspectable;
+use crate::{
+    FunctionType,
+    Function
+};
 
 pub struct Module {
     module: *mut LLVMModule
 }
 
-impl Inspectable for Module {
-    fn inspect(&self) {
+impl Debug for Module {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         unsafe {
             let s = LLVMPrintModuleToString(self.module);
-            println!("{}", CStr::from_ptr(s).to_string_lossy());
+            let result = writeln!(f, "{}", CStr::from_ptr(s).to_string_lossy());
             LLVMDisposeMessage(s);
+            result
         }
     }
 }
@@ -50,6 +59,16 @@ impl Module {
         Module {
             module
         }
+    }
+
+    pub fn add_function<S: AsRef<str>, T: FunctionType>(&self, name: S) -> Function<T> {
+        let name = CString::new(name.as_ref()).unwrap();
+
+        let function = unsafe {
+            LLVMAddFunction(self.module, name.to_bytes_with_nul().as_ptr() as *const i8, T::function_type())
+        };
+
+        Function::new(function)
     }
 }
 

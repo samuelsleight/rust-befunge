@@ -8,5 +8,7 @@ edition = "2018"
 
 [dependencies]
 structopt = "0.2.10"
-llvm-sys = "70"
 pipeline = { path = "pipeline" }
+llvm-wrapper = { path = "llvm-wrapper" }
+
+[workspace]
