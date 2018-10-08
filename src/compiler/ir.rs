@@ -9,6 +9,7 @@ pub struct Block {
 #[derive(Debug, Clone)]
 pub enum Action {
     OutputChar(char),
+    OutputString(String)
 }
 
 #[derive(Debug, Clone)]

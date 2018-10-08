@@ -6,7 +6,9 @@ use llvm_sys::{
     LLVMBuilder,
     core::{
         LLVMVoidType,
+        LLVMInt8Type,
         LLVMInt32Type,
+        LLVMPointerType,
         LLVMFunctionType,
         LLVMBuildCall,
     }
@@ -39,6 +41,7 @@ macro_rules! value_type {
 
 value_type!(() => LLVMVoidType());
 value_type!(i32 => LLVMInt32Type());
+value_type!(String => LLVMPointerType(LLVMInt8Type(), 0));
 
 fn function_type(ret: *mut LLVMType, params: Vec<*mut LLVMType>) -> *mut LLVMType {
     unsafe {

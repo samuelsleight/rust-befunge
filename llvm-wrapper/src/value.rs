@@ -1,10 +1,15 @@
 use crate::ValueType;
 
-use std::marker::PhantomData;
+use std::{
+    ffi::CString,
+    marker::PhantomData
+};
 
 use llvm_sys::{
     LLVMValue,
-    core::LLVMConstInt
+    core::{
+        LLVMConstInt,
+    }
 };
 
 pub trait Constant: ValueType {
@@ -25,6 +30,12 @@ pub struct Value<T: ValueType> {
 }
 
 impl<T: ValueType> Value<T> {
+    pub fn new(value: *mut LLVMValue) -> Value<T> {
+        Value {
+            value,
+            phantom: PhantomData
+        }
+    }
     pub fn constant(t: T) -> Value<T> where T: Constant {
         Value {
             value: t.constant(),

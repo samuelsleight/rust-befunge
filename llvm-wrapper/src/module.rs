@@ -12,19 +12,30 @@ use std::{
 
 use llvm_sys::{
     LLVMModule,
+    LLVMLinkage,
     core::{
+        LLVMArrayType,
+        LLVMInt8Type,
         LLVMModuleCreateWithName,
         LLVMSetSourceFileName,
         LLVMPrintModuleToString,
         LLVMAddFunction,
         LLVMDisposeModule,
         LLVMDisposeMessage,
+        LLVMConstString,
+        LLVMAddGlobal,
+        LLVMSetLinkage,
+        LLVMSetGlobalConstant,
+        LLVMSetInitializer,
+        LLVMConstBitCast
     },
 };
 
 use crate::{
+    types::ValueType,
     FunctionType,
-    Function
+    Function,
+    Value
 };
 
 pub struct Module {
@@ -69,6 +80,31 @@ impl Module {
         };
 
         Function::new(function)
+    }
+
+    pub fn add_string<S: AsRef<str>>(&self, string: S) -> Value<String> {
+        let string = CString::new(string.as_ref()).unwrap();
+        let bytes = string.to_bytes_with_nul();
+
+        let global = {
+            let name = CString::new("string").unwrap();
+
+            unsafe {
+                LLVMAddGlobal(self.module, LLVMArrayType(LLVMInt8Type(), bytes.len() as u32), name.to_bytes_with_nul().as_ptr() as *const i8)
+            }
+        };
+
+        let string = unsafe {
+            LLVMConstString(bytes.as_ptr() as *const i8, bytes.len() as u32, 1)
+        };
+
+        unsafe {
+            LLVMSetLinkage(global, LLVMLinkage::LLVMInternalLinkage);
+            LLVMSetGlobalConstant(global, 1);
+            LLVMSetInitializer(global, string);
+
+            Value::new(LLVMConstBitCast(global, String::value_type()))
+        }
     }
 }
 

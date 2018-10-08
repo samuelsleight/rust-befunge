@@ -41,12 +41,14 @@ impl Stage<Error> for Translator {
         let function = module.add_function::<_, fn() -> i32>("main");
         let block = function.add_block("entry");
         let putchar = module.add_function::<_, fn(i32)>("putchar");
+        let puts = module.add_function::<_, fn(String)>("puts");
         let builder = llvm::Builder::new();
         builder.set_block(&block);
 
         for action in input[0].actions() {
             match action {
-                Action::OutputChar(c) => builder.build_call(&putchar, (llvm::Value::<i32>::constant(*c as u8 as i32),)),
+                Action::OutputChar(c) => builder.build_call(&putchar, (llvm::Value::constant(*c as u8 as i32),)),
+                Action::OutputString(s) => builder.build_call(&puts, (module.add_string(s.clone()),)),
             }
         }
 

@@ -1,4 +1,7 @@
+#![feature(never_type)]
+
 extern crate llvm_wrapper;
+extern crate pipeline;
 
 use std::path::PathBuf;
 
@@ -11,7 +14,8 @@ use crate::{
     reader::FileReader,
     interpreter::Interpreter,
     compiler::Compiler,
-    llvm::Translator,
+    optimizer::{Optimizer, OptimizationLevel},
+    translator::Translator,
 };
 
 mod error;
@@ -19,7 +23,8 @@ mod inspector;
 mod reader;
 mod interpreter;
 mod compiler;
-mod llvm;
+mod optimizer;
+mod translator;
 
 #[derive(Debug, StructOpt)]
 struct Options {
@@ -31,6 +36,9 @@ struct Options {
 
     #[structopt(long = "debug-file")]
     debug_file: bool,
+
+    #[structopt(long = "debug-unoptimized-ir")]
+    debug_unoptimized_ir: bool,
 
     #[structopt(long = "debug-ir")]
     debug_ir: bool,
@@ -54,6 +62,8 @@ fn main() {
     else {
         pipe
             .and_then(Compiler::new(), |_| ())
+            .and_then(Inspector::new(options.debug_unoptimized_ir), |_| ())
+            .and_then(Optimizer::new(OptimizationLevel::All), |_| ())
             .and_then(Inspector::new(options.debug_ir), |_| ())
             .and_then(Translator::new(options.filename.clone()), |_| ())
             .and_then(Inspector::new(options.debug_llvm), |_| ())
