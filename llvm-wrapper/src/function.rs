@@ -26,7 +26,7 @@ impl<T: FunctionType> Function<T> {
         }
     }
 
-    pub(crate) fn build_call(&self, builder: *mut LLVMBuilder, params: T::Params) {
+    pub(crate) fn build_call(&self, builder: *mut LLVMBuilder, params: T::Params) -> T::Return {
         T::build_call(builder, self.value, params)
     }
 

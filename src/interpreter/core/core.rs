@@ -4,7 +4,10 @@ use crate::{
     error::Error,
     interpreter::{
         Error as InterpreterError,
-        core::InterpreterCallback,
+        core::{
+            InterpreterCallback,
+            StackValue,
+        },
         grid::{
             Grid,
             Ip,
@@ -22,7 +25,7 @@ struct State {
     ip: Ip,
 
     delta: Option<Delta>,
-    stack: Vec<i32>,
+    stack: Vec<StackValue>,
     stringmode: bool,
 }
 
@@ -55,12 +58,12 @@ impl State {
         self.ip.advance(self.delta.unwrap_or(Delta::Right));
     }
 
-    fn push(&mut self, value: i32) {
-        self.stack.push(value);
+    fn push<T: Into<StackValue>>(&mut self, value: T) {
+        self.stack.push(value.into());
     }
 
-    fn pop(&mut self) -> i32 {
-        self.stack.pop().unwrap_or(0 )
+    fn pop(&mut self) -> StackValue {
+        self.stack.pop().unwrap_or(StackValue::Const(0))
     }
 
     fn set_delta(&mut self, delta: Delta) {
@@ -90,6 +93,7 @@ impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: Interp
                 c if state.stringmode() => state.push(c as i32),
 
                 // Simple Movement
+                ' ' => (),
                 '<' => state.set_delta(Delta::Left),
                 '>' => state.set_delta(Delta::Right),
                 '^' => state.set_delta(Delta::Up),
@@ -99,35 +103,49 @@ impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: Interp
                 // Value Pushing
                 c @ '0' ... '9' => state.push((c as u8 - b'0') as i32),
 
+                // Addition
+                '+' => match (state.pop(), state.pop()) {
+                    (StackValue::Const(lhs), StackValue::Const(rhs)) => state.push(lhs + rhs),
+                    (lhs, rhs) => state.push(StackValue::add(lhs, rhs))
+                },
+
                 // Multiplication
-                '*' => {
-                    let lhs = state.pop();
-                    let rhs = state.pop();
-                    state.push(lhs * rhs);
+                '*' => match (state.pop(), state.pop()) {
+                    (StackValue::Const(lhs), StackValue::Const(rhs)) => state.push(lhs * rhs),
+                    (lhs, rhs) => state.push(StackValue::mul(lhs, rhs))
                 },
 
                 // Duplication
-                ':' => {
-                    let value = state.pop();
-                    state.push(value);
-                    state.push(value);
-                }
+                ':' => match state.pop() {
+                    StackValue::Const(value) => {
+                        state.push(value);
+                        state.push(value);
+                    },
+
+                    _ => unimplemented!("Duplication of non-const values is not yet implemented")
+                },
 
                 // If (Horizontal)
-                '_' => if state.pop() == 0 {
-                    state.set_delta(Delta::Right);
-                }
-                else {
-                    state.set_delta(Delta::Left);
-                }
+                '_' => match state.pop() {
+                    StackValue::Const(value) => if value == 0 {
+                        state.set_delta(Delta::Right);
+                    }
+                    else {
+                        state.set_delta(Delta::Left);
+                    },
 
-                // Output Char
-                ',' => self.callback.output(state.pop() as u8 as char),
+                    _ => unimplemented!("Comparison of non-const values is not yet implemented")
+                },
+
+
+                // Char IO
+                '~' => state.push(self.callback.input()),
+                ',' => self.callback.output(state.pop()),
 
                 // End
                 '@' => return Ok(self.callback.end()),
 
-                _ => unimplemented!()
+                c => unimplemented!("The interpreter hit an unimplemented instruction: '{}'", c)
             }
         }
 

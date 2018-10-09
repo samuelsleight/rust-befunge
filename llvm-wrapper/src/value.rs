@@ -1,9 +1,6 @@
 use crate::ValueType;
 
-use std::{
-    ffi::CString,
-    marker::PhantomData
-};
+use std::marker::PhantomData;
 
 use llvm_sys::{
     LLVMValue,
@@ -24,6 +21,7 @@ impl Constant for i32 {
     }
 }
 
+#[derive(Clone)]
 pub struct Value<T: ValueType> {
     value: *mut LLVMValue,
     phantom: PhantomData<T>
@@ -36,6 +34,7 @@ impl<T: ValueType> Value<T> {
             phantom: PhantomData
         }
     }
+
     pub fn constant(t: T) -> Value<T> where T: Constant {
         Value {
             value: t.constant(),

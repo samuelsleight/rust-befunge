@@ -3,18 +3,27 @@ use pipeline::Stage;
 use crate::{
     error::Error,
     compiler::ir::{
-        Block, Action, End
+        Block, 
+        Action, 
+        ActionValue, 
+        End
     },
     interpreter::{
         Grid,
-        core::{InterpreterCallback, InterpreterCore},
+        core::{
+            StackValue,
+            DynamicValue,
+            InterpreterCallback, 
+            InterpreterCore
+        },
     }
 };
 
 pub struct Compiler {}
 
 pub struct State {
-    actions: Vec<Action>
+    actions: Vec<Action>,
+    tag: usize
 }
 
 impl Compiler {
@@ -26,7 +35,8 @@ impl Compiler {
 impl State {
     fn new() -> State {
         State {
-            actions: Vec::new()
+            actions: Vec::new(),
+            tag: 0
         }
     }
 
@@ -38,8 +48,17 @@ impl State {
 impl InterpreterCallback for State {
     type End = Block;
 
-    fn output(&mut self, c: char) {
-        self.actions.push(Action::OutputChar(c));
+    fn output(&mut self, value: StackValue) {
+        match value {
+            StackValue::Const(i) => self.actions.push(Action::OutputChar(ActionValue::Const(i))),
+            StackValue::Dynamic(value) => self.actions.push(Action::OutputChar(ActionValue::Dynamic(value)))
+        }
+    }
+
+    fn input(&mut self) -> StackValue {
+        self.actions.push(Action::Input(self.tag));
+        self.tag += 1;
+        StackValue::Dynamic(DynamicValue::Tagged(self.tag - 1))
     }
 
     fn end(&mut self) -> Self::End {

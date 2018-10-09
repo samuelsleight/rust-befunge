@@ -1,4 +1,7 @@
-use crate::inspector::Inspectable;
+use crate::{
+    interpreter::core::DynamicValue,
+    inspector::Inspectable
+};
 
 #[derive(Debug, Clone)]
 pub struct Block {
@@ -7,9 +10,16 @@ pub struct Block {
 }
 
 #[derive(Debug, Clone)]
+pub enum ActionValue {
+    Const(i32),
+    Dynamic(DynamicValue),
+}
+
+#[derive(Debug, Clone)]
 pub enum Action {
-    OutputChar(char),
-    OutputString(String)
+    OutputChar(ActionValue),
+    OutputString(String),
+    Input(usize)
 }
 
 #[derive(Debug, Clone)]

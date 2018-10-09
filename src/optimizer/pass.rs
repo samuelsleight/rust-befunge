@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 
 use crate::compiler::ir::{
     Action,
+    ActionValue,
     Block
 };
 
@@ -35,7 +36,7 @@ fn optimize_string_print(block: Block) -> Block {
     'outer: loop {
         loop {
             match iter.peek() {
-                Some(Action::OutputChar(_)) => break,
+                Some(Action::OutputChar(ActionValue::Const(_))) => break,
                 Some(_) => actions.push(iter.next().unwrap()),
                 None => break 'outer,
             }
@@ -43,8 +44,8 @@ fn optimize_string_print(block: Block) -> Block {
 
         let mut string = String::new();
 
-        while let Some(Action::OutputChar(c)) = iter.next() {
-            string.push(c);
+        while let Some(Action::OutputChar(ActionValue::Const(i))) = iter.next() {
+            string.push(i as u8 as char);
         }
 
         actions.push(Action::OutputString(string));
