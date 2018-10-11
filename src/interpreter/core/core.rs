@@ -20,13 +20,20 @@ pub struct InterpreterCore<Callback> {
     callback: Callback
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum Stringmode {
+    Not,
+    Once,
+    Stringmode
+}
+
 struct State {
     grid: Grid<char>,
     ip: Ip,
 
     delta: Option<Delta>,
     stack: Vec<StackValue>,
-    stringmode: bool,
+    stringmode: Stringmode,
 }
 
 impl State {
@@ -39,7 +46,7 @@ impl State {
 
             delta: None,
             stack: Vec::new(),
-            stringmode: false,
+            stringmode: Stringmode::Not,
         }
     }
 
@@ -71,10 +78,17 @@ impl State {
     }
 
     fn toggle_stringmode(&mut self) {
-        self.stringmode = !self.stringmode;
+        match self.stringmode {
+            Stringmode::Not => self.stringmode = Stringmode::Stringmode,
+            Stringmode::Once | Stringmode::Stringmode => self.stringmode = Stringmode::Not,
+        }
     }
 
-    fn stringmode(&self) -> bool {
+    fn once_stringmode(&mut self) {
+        self.stringmode = Stringmode::Once
+    }
+
+    fn stringmode(&self) -> Stringmode {
         self.stringmode
     }
 }
@@ -90,7 +104,16 @@ impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: Interp
             match c {
                 // Stringmode
                 '"' => state.toggle_stringmode(),
-                c if state.stringmode() => state.push(c as i32),
+
+                c if state.stringmode() != Stringmode::Not => {
+                    state.push(c as i32);
+
+                    if state.stringmode() == Stringmode::Once {
+                        state.toggle_stringmode();
+                    }
+                },
+
+                '\'' => state.once_stringmode(),
 
                 // Simple Movement
                 ' ' => (),
@@ -102,6 +125,7 @@ impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: Interp
 
                 // Value Pushing
                 c @ '0' ... '9' => state.push((c as u8 - b'0') as i32),
+                c @ 'a' ... 'f' => state.push(((c as u8 + 10) - b'a') as i32),
 
                 // Addition
                 '+' => match (state.pop(), state.pop()) {
@@ -113,6 +137,12 @@ impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: Interp
                 '*' => match (state.pop(), state.pop()) {
                     (StackValue::Const(lhs), StackValue::Const(rhs)) => state.push(lhs * rhs),
                     (lhs, rhs) => state.push(StackValue::mul(lhs, rhs))
+                },
+
+                // Subtraction
+                '-' => match (state.pop(), state.pop()) {
+                    (StackValue::Const(lhs), StackValue::Const(rhs)) => state.push(lhs - rhs),
+                    (lhs, rhs) => unimplemented!("Subtraction of non-const values is not yet implemented")
                 },
 
                 // Duplication
@@ -137,6 +167,17 @@ impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: Interp
                     _ => unimplemented!("Comparison of non-const values is not yet implemented")
                 },
 
+                // If (Vertical)
+                '|' => match state.pop() {
+                    StackValue::Const(value) => if value == 0 {
+                        state.set_delta(Delta::Down);
+                    }
+                    else {
+                        state.set_delta(Delta::Up);
+                    },
+
+                    _ => unimplemented!("Comparison of non-const values is not yet implemented")
+                },
 
                 // Char IO
                 '~' => state.push(self.callback.input()),
