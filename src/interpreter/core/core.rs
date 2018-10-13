@@ -6,6 +6,8 @@ use crate::{
         Error as InterpreterError,
         core::{
             InterpreterCallback,
+            DebuggerCallback,
+            DebugInspectable,
             StackValue,
         },
         grid::{
@@ -16,8 +18,9 @@ use crate::{
     }
 };
 
-pub struct InterpreterCore<Callback> {
-    callback: Callback
+pub struct InterpreterCore<Callback, Debugger> {
+    callback: Callback,
+    debugger: Debugger,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -27,7 +30,7 @@ enum Stringmode {
     Stringmode
 }
 
-struct State {
+pub struct State {
     grid: Grid<char>,
     ip: Ip,
 
@@ -93,7 +96,25 @@ impl State {
     }
 }
 
-impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: InterpreterCallback {
+impl DebugInspectable for State {
+    fn inspect_stack(&self) -> &[StackValue] {
+        &self.stack
+    }
+
+    fn inspect_pos(&self) -> (u32, u32) {
+        (self.ip.row(), self.ip.col())
+    }
+
+    fn inspect_next(&self) -> char {
+        self.grid[self.ip]
+    }
+}
+
+impl<Callback, Debugger> Stage<Error> for InterpreterCore<Callback, Debugger> 
+where 
+    Callback: InterpreterCallback,
+    Debugger: DebuggerCallback<State>
+{
     type Input = Grid<char>;
     type Output = Callback::End;
 
@@ -101,6 +122,8 @@ impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: Interp
         let mut state = State::new(input);
 
         while let Some(c) = state.next() {
+            self.debugger.debug_step(&state);
+
             match c {
                 // Stringmode
                 '"' => state.toggle_stringmode(),
@@ -194,12 +217,15 @@ impl<Callback> Stage<Error> for InterpreterCore<Callback> where Callback: Interp
     }
 }
 
-impl<Callback> InterpreterCore<Callback> where Callback: InterpreterCallback {
-    pub fn new(callback: Callback) -> InterpreterCore<Callback> {
+impl<Callback, Debugger> InterpreterCore<Callback, Debugger> 
+where 
+    Callback: InterpreterCallback,
+    Debugger: DebuggerCallback<State>
+{
+    pub fn new(callback: Callback, debugger: Debugger) -> InterpreterCore<Callback, Debugger> {
         InterpreterCore {
-            callback
+            callback,
+            debugger
         }
     }
 }
-
-

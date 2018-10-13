@@ -12,7 +12,7 @@ use pipeline::{Err, Pipeline, RunPipeline};
 use crate::{
     inspector::Inspector,
     reader::FileReader,
-    interpreter::Interpreter,
+    interpreter::{Interpreter, Debugger},
     compiler::Compiler,
     optimizer::{Optimizer, OptimizationLevel},
     translator::Translator,
@@ -65,7 +65,13 @@ enum Options {
     Interpreter {
         #[structopt(flatten)]
         options: SharedOptions
-    }
+    },
+
+    #[structopt(name = "d")]
+    Debugger {
+        #[structopt(flatten)]
+        options: SharedOptions
+    },
 }
 
 impl Options {
@@ -73,6 +79,7 @@ impl Options {
         match self {
             &Options::Compiler { ref options, .. } => options,
             &Options::Interpreter { ref options } => options,
+            &Options::Debugger { ref options } => options,
         }
     }
 }
@@ -98,6 +105,10 @@ fn main() {
 
         Options::Interpreter { .. } => pipe
             .and_then(Interpreter::stage(), |_| ())
+            .run(options.filename.clone()),
+
+        Options::Debugger { .. } => pipe
+            .and_then(Debugger::stage(), |_| ())
             .run(options.filename.clone()),
     };
 

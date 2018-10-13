@@ -10,6 +10,7 @@ use crate::{
     },
     interpreter::{
         Grid,
+        NullDebugger,
         core::{
             StackValue,
             DynamicValue,
@@ -41,7 +42,7 @@ impl State {
     }
 
     fn compile(self, grid: Grid<char>) -> Result<Block, Error> {
-        InterpreterCore::new(self).run(grid)
+        InterpreterCore::new(self, NullDebugger).run(grid)
     }
 }
 

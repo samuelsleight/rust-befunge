@@ -1,6 +1,8 @@
 use crate::interpreter::core::{
     StackValue,
     InterpreterCallback,
+    DebuggerCallback,
+    DebugInspectable,
     InterpreterCore
 };
 
@@ -10,10 +12,11 @@ use std::{
 };
 
 pub struct Interpreter;
+pub struct NullDebugger;
 
 impl Interpreter {
-    pub fn stage() -> InterpreterCore<Interpreter> {
-        InterpreterCore::new(Interpreter)
+    pub fn stage() -> InterpreterCore<Interpreter, NullDebugger> {
+        InterpreterCore::new(Interpreter, NullDebugger)
     }
 }
 
@@ -37,4 +40,8 @@ impl InterpreterCallback for Interpreter {
     }
 
     fn end(&mut self) {}
+}
+
+impl<I: DebugInspectable> DebuggerCallback<I> for NullDebugger {
+    fn debug_step(&self, _: &I) {}
 }

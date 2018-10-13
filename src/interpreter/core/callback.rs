@@ -31,8 +31,16 @@ pub trait InterpreterCallback {
     type End;
 
     fn output(&mut self, value: StackValue);
-
     fn input(&mut self) -> StackValue;
-
     fn end(&mut self) -> Self::End;
+}
+
+pub trait DebugInspectable {
+    fn inspect_stack(&self) -> &[StackValue];
+    fn inspect_pos(&self) -> (u32, u32);
+    fn inspect_next(&self) -> char;
+}
+
+pub trait DebuggerCallback<I: DebugInspectable> {
+    fn debug_step(&self, inspectable: &I);
 }
