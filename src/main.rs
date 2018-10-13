@@ -27,48 +27,78 @@ mod optimizer;
 mod translator;
 
 #[derive(Debug, StructOpt)]
-struct Options {
+struct SharedOptions {
+    #[structopt(flatten)]
+    debug: Debug,
+
     #[structopt(required = true, parse(from_os_str))]
     filename: PathBuf,
+}
 
-    #[structopt(long = "interpret", short = "i")]
-    interpret: bool,
-
+#[derive(Debug, StructOpt)]
+struct Debug {
     #[structopt(long = "debug-file")]
-    debug_file: bool,
+    file: bool,
 
     #[structopt(long = "debug-unoptimized-ir")]
-    debug_unoptimized_ir: bool,
+    unoptimized_ir: bool,
 
     #[structopt(long = "debug-ir")]
-    debug_ir: bool,
+    ir: bool,
 
     #[structopt(long = "debug-llvm")]
-    debug_llvm: bool,
+    llvm: bool
+}
+
+#[derive(Debug, StructOpt)]
+enum Options {
+    #[structopt(name = "c")]
+    Compiler {
+        #[structopt(long = "optimize", short = "O", default_value="", parse(from_str))]
+        optimize: OptimizationLevel,
+
+        #[structopt(flatten)]
+        options: SharedOptions
+    },
+
+    #[structopt(name = "i")]
+    Interpreter {
+        #[structopt(flatten)]
+        options: SharedOptions
+    }
+}
+
+impl Options {
+    fn options(&self) -> &SharedOptions {
+        match self {
+            &Options::Compiler { ref options, .. } => options,
+            &Options::Interpreter { ref options } => options,
+        }
+    }
 }
 
 fn main() {
-    let options = Options::from_args();
+    let command = Options::from_args();
+    let options = command.options();
 
     let pipe = pipeline
         ::pipeline(FileReader::new(), |_| ())
-        .and_then(Inspector::new(options.debug_file), |_| ());
+        .and_then(Inspector::new(options.debug.file), |_| ());
 
-    let result = if options.interpret {
-        pipe
-            .and_then(Interpreter::stage(), |_| ())
-            .run(options.filename)
-    }
-    else {
-        pipe
+    let result = match command {
+        Options::Compiler { optimize, .. } => pipe
             .and_then(Compiler::new(), |_| ())
-            .and_then(Inspector::new(options.debug_unoptimized_ir), |_| ())
-            .and_then(Optimizer::new(OptimizationLevel::All), |_| ())
-            .and_then(Inspector::new(options.debug_ir), |_| ())
+            .and_then(Inspector::new(options.debug.unoptimized_ir), |_| ())
+            .and_then(Optimizer::new(optimize), |_| ())
+            .and_then(Inspector::new(options.debug.ir), |_| ())
             .and_then(Translator::new(options.filename.clone()), |_| ())
-            .and_then(Inspector::new(options.debug_llvm), |_| ())
-            .run(options.filename)
-            .map(|_| ())
+            .and_then(Inspector::new(options.debug.llvm), |_| ())
+            .run(options.filename.clone())
+            .map(|_| ()),
+
+        Options::Interpreter { .. } => pipe
+            .and_then(Interpreter::stage(), |_| ())
+            .run(options.filename.clone()),
     };
 
     if let Err(Err::Err(e)) = result {

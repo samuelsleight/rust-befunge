@@ -10,9 +10,20 @@ use crate::{
     optimizer::pass::{Pass, StringPrintPass},
 };
 
+#[derive(Debug, Clone, Copy)]
 pub enum OptimizationLevel {
     None,
     All
+}
+
+impl From<&str> for OptimizationLevel {
+    fn from(src: &str) -> OptimizationLevel {
+        match src {
+            "0" => OptimizationLevel::None,
+            "" => OptimizationLevel::All,
+            _ => panic!("Invalid optimization flag provided"),
+        }
+    }
 }
 
 pub struct Optimizer {
