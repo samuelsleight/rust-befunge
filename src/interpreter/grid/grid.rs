@@ -27,7 +27,7 @@ fn all_rows_equal<T>(grid: &[Vec<T>]) -> bool {
 }
 
 impl<T> Grid<T> {
-    pub fn new(vec: Vec<Vec<T>>) -> Grid<T> {
+    pub fn new(vec: Vec<Vec<T>>) -> Self {
         assert!(all_rows_equal(&vec));
 
         Grid(vec.into_iter()
@@ -37,7 +37,7 @@ impl<T> Grid<T> {
     }
 
     pub fn ip(&self) -> Ip {
-        Ip::new(0, 0, self.0[0].len() as u32, self.0.len() as u32)
+        Ip::new(0, 0, self.0[0].len(), self.0.len())
     }
 }
 

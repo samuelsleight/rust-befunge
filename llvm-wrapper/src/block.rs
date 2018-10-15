@@ -9,8 +9,8 @@ pub struct Block {
 }
 
 impl Block {
-    pub(crate) fn new(value: *mut LLVMBasicBlock) -> Block {
-        Block {
+    pub(crate) fn new(value: *mut LLVMBasicBlock) -> Self {
+        Self {
             value
         }
     }

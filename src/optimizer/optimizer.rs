@@ -17,7 +17,7 @@ pub enum OptimizationLevel {
 }
 
 impl From<&str> for OptimizationLevel {
-    fn from(src: &str) -> OptimizationLevel {
+    fn from(src: &str) -> Self {
         match src {
             "0" => OptimizationLevel::None,
             "" => OptimizationLevel::All,
@@ -31,8 +31,8 @@ pub struct Optimizer {
 }
 
 impl Optimizer {
-    pub fn new(level: OptimizationLevel) -> Optimizer {
-        Optimizer {
+    pub fn new(level: OptimizationLevel) -> Self {
+        Self {
             level
         }
     }

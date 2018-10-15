@@ -10,13 +10,13 @@ use llvm_sys::{
 };
 
 pub trait Constant: ValueType {
-    fn constant(&self) -> *mut LLVMValue;
+    fn constant(self) -> *mut LLVMValue;
 }
 
 impl Constant for i32 {
-    fn constant(&self) -> *mut LLVMValue {
+    fn constant(self) -> *mut LLVMValue {
         unsafe {
-            LLVMConstInt(Self::value_type(), *self as u64, 0)
+            LLVMConstInt(Self::value_type(), self as u64, 0)
         }
     }
 }
@@ -28,15 +28,15 @@ pub struct Value<T: ValueType> {
 }
 
 impl<T: ValueType> Value<T> {
-    pub fn new(value: *mut LLVMValue) -> Value<T> {
-        Value {
+    pub fn new(value: *mut LLVMValue) -> Self {
+        Self {
             value,
             phantom: PhantomData
         }
     }
 
-    pub fn constant(t: T) -> Value<T> where T: Constant {
-        Value {
+    pub fn constant(t: T) -> Self where T: Constant {
+        Self {
             value: t.constant(),
             phantom: PhantomData
         }

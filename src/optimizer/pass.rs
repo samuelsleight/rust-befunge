@@ -1,6 +1,9 @@
 use pipeline::Stage;
 
-use std::marker::PhantomData;
+use std::{
+    char,
+    marker::PhantomData
+};
 
 use crate::compiler::ir::{
     Action,
@@ -18,6 +21,10 @@ pub trait Pass {
     }
 }
 
+pub trait BlockPass {
+    fn optimize_block(block: Block) -> Block;
+}
+
 impl<T> Stage<!> for PassWrapper<T> where T: Pass {
     type Input = Vec<Block>;
     type Output = Vec<Block>;
@@ -27,35 +34,37 @@ impl<T> Stage<!> for PassWrapper<T> where T: Pass {
     }
 }
 
-pub struct StringPrintPass;
-
-fn optimize_string_print(block: Block) -> Block {
-    let mut actions: Vec<Action> = Vec::new();
-    let mut iter = block.actions().iter().cloned().peekable();
-
-    'outer: loop {
-        loop {
-            match iter.peek() {
-                Some(Action::OutputChar(ActionValue::Const(_))) => break,
-                Some(_) => actions.push(iter.next().unwrap()),
-                None => break 'outer,
-            }
-        }
-
-        let mut string = String::new();
-
-        while let Some(Action::OutputChar(ActionValue::Const(i))) = iter.next() {
-            string.push(i as u8 as char);
-        }
-
-        actions.push(Action::OutputString(string));
+impl<T> Pass for T where T: BlockPass {
+    fn optimize(input: Vec<Block>) -> Vec<Block> {
+        input.into_iter().map(Self::optimize_block).collect()
     }
-
-    Block::new(actions, block.end().clone())
 }
 
-impl Pass for StringPrintPass {
-    fn optimize(input: Vec<Block>) -> Vec<Block> {
-        input.into_iter().map(optimize_string_print).collect()
+pub struct StringPrintPass;
+
+impl BlockPass for StringPrintPass {
+    fn optimize_block(block: Block) -> Block {
+        let mut actions: Vec<Action> = Vec::new();
+        let mut iter = block.actions().iter().cloned().peekable();
+
+        'outer: loop {
+            loop {
+                match iter.peek() {
+                    Some(Action::OutputChar(ActionValue::Const(_))) => break,
+                    Some(_) => actions.push(iter.next().unwrap()),
+                    None => break 'outer,
+                }
+            }
+
+            let mut string = String::new();
+
+            while let Some(Action::OutputChar(ActionValue::Const(i))) = iter.next() {
+                string.push(unsafe { char::from_u32_unchecked(i as u32) });
+            }
+
+            actions.push(Action::OutputString(string));
+        }
+
+        Block::new(actions, block.end().clone())
     }
 }

@@ -40,10 +40,10 @@ pub struct State {
 }
 
 impl State {
-    fn new(grid: Grid<char>) -> State {
+    fn new(grid: Grid<char>) -> Self {
         let ip = grid.ip();
 
-        State {
+        Self {
             grid,
             ip,
 
@@ -101,7 +101,7 @@ impl DebugInspectable for State {
         &self.stack
     }
 
-    fn inspect_pos(&self) -> (u32, u32) {
+    fn inspect_pos(&self) -> (usize, usize) {
         (self.ip.row(), self.ip.col())
     }
 
@@ -110,8 +110,8 @@ impl DebugInspectable for State {
     }
 }
 
-impl<Callback, Debugger> Stage<Error> for InterpreterCore<Callback, Debugger> 
-where 
+impl<Callback, Debugger> Stage<Error> for InterpreterCore<Callback, Debugger>
+where
     Callback: InterpreterCallback,
     Debugger: DebuggerCallback<State>
 {
@@ -147,8 +147,8 @@ where
                 '#' => state.advance(),
 
                 // Value Pushing
-                c @ '0' ... '9' => state.push((c as u8 - b'0') as i32),
-                c @ 'a' ... 'f' => state.push(((c as u8 + 10) - b'a') as i32),
+                c @ '0' ... '9' => state.push(i32::from(c as u8 - b'0')),
+                c @ 'a' ... 'f' => state.push(i32::from((c as u8 + 10) - b'a')),
 
                 // Addition
                 '+' => match (state.pop(), state.pop()) {
@@ -165,7 +165,7 @@ where
                 // Subtraction
                 '-' => match (state.pop(), state.pop()) {
                     (StackValue::Const(lhs), StackValue::Const(rhs)) => state.push(lhs - rhs),
-                    (lhs, rhs) => unimplemented!("Subtraction of non-const values is not yet implemented")
+                    (_, _) => unimplemented!("Subtraction of non-const values is not yet implemented")
                 },
 
                 // Duplication
@@ -217,13 +217,13 @@ where
     }
 }
 
-impl<Callback, Debugger> InterpreterCore<Callback, Debugger> 
-where 
+impl<Callback, Debugger> InterpreterCore<Callback, Debugger>
+where
     Callback: InterpreterCallback,
     Debugger: DebuggerCallback<State>
 {
-    pub fn new(callback: Callback, debugger: Debugger) -> InterpreterCore<Callback, Debugger> {
-        InterpreterCore {
+    pub fn new(callback: Callback, debugger: Debugger) -> Self {
+        Self {
             callback,
             debugger
         }

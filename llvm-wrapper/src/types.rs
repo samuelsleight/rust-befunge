@@ -66,13 +66,13 @@ impl ValueType for () {
     }
 }
 
-fn function_type(ret: *mut LLVMType, params: Vec<*mut LLVMType>) -> *mut LLVMType {
+fn function_type(ret: *mut LLVMType, params: &[*mut LLVMType]) -> *mut LLVMType {
     unsafe {
         LLVMFunctionType(ret, params.as_ptr() as *mut _, params.len() as u32, 0)
     }
 }
 
-fn build_call(builder: *mut LLVMBuilder, function: *mut LLVMValue, params: Vec<*mut LLVMValue>) -> *mut LLVMValue
+fn build_call(builder: *mut LLVMBuilder, function: *mut LLVMValue, params: &[*mut LLVMValue]) -> *mut LLVMValue
 {
     unsafe {
         let name = CString::new("").unwrap();
@@ -85,11 +85,11 @@ impl<R> FunctionType for fn() -> R where R: ValueType {
     type Return = R::ReturnType;
 
     fn function_type() -> *mut LLVMType {
-        function_type(R::value_type(), vec![])
+        function_type(R::value_type(), &[])
     }
 
     fn build_call(builder: *mut LLVMBuilder, function: *mut LLVMValue, _: Self::Params) -> Self::Return {
-        R::as_return_value(build_call(builder, function, vec![]))
+        R::as_return_value(build_call(builder, function, &[]))
     }
 }
 
@@ -98,10 +98,10 @@ impl<T, R> FunctionType for fn(T) -> R where R: ValueType, T: ValueType {
     type Return = R::ReturnType;
 
     fn function_type() -> *mut LLVMType {
-        function_type(R::value_type(), vec![T::value_type()])
+        function_type(R::value_type(), &[T::value_type()])
     }
 
     fn build_call(builder: *mut LLVMBuilder, function: *mut LLVMValue, params: Self::Params) -> Self::Return {
-        R::as_return_value(build_call(builder, function, vec![params.0.value()]))
+        R::as_return_value(build_call(builder, function, &[params.0.value()]))
     }
 }

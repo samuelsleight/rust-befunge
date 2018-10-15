@@ -29,25 +29,25 @@ impl Inspectable for llvm::Module {
 }
 
 pub struct Translator {
-    source: PathBuf
+    source: PathBuf,
 }
 
 impl Translator {
-    pub fn new(source: PathBuf) -> Translator {
-        Translator {
+    pub fn new(source: PathBuf) -> Self {
+        Self {
             source
         }
     }
 }
 
 pub struct Values {
-    values: HashMap<usize, llvm::Value<i32>>
+    values: HashMap<usize, llvm::Value<i32>>,
 }
 
 impl Values {
-    fn new() -> Values {
-        Values {
-            values: HashMap::new()
+    fn new() -> Self {
+        Self {
+            values: HashMap::new(),
         }
     }
 
@@ -57,22 +57,22 @@ impl Values {
 
     fn get_value(&mut self, value: &StackValue, builder: &llvm::Builder) -> llvm::Value<i32> {
         match value {
-            &StackValue::Const(i) => llvm::Value::constant(i),
-            &StackValue::Dynamic(ref value) => self.get(value, builder)
+            StackValue::Const(i) => llvm::Value::constant(*i),
+            StackValue::Dynamic(ref value) => self.get(value, builder),
         }
     }
 
     fn get(&mut self, value: &DynamicValue, builder: &llvm::Builder) -> llvm::Value<i32> {
         match value {
-            &DynamicValue::Tagged(idx) => self.values.get(&idx).expect("Invalid tagged value").clone(),
+            DynamicValue::Tagged(idx) => self.values.get(&idx).expect("Invalid tagged value").clone(),
 
-            &DynamicValue::Add(ref lhs, ref rhs) => {
+            DynamicValue::Add(ref lhs, ref rhs) => {
                 let lhs = self.get_value(&*lhs, builder);
                 let rhs = self.get_value(&*rhs, builder);
-                builder.build_add(lhs, rhs)
-            },
+                builder.build_add(&lhs, &rhs)
+            }
 
-            _ => unimplemented!("Unimplemented dynamic value type: {:?}", value)
+            _ => unimplemented!("Unimplemented dynamic value type: {:?}", value),
         }
     }
 }
@@ -102,13 +102,11 @@ impl Stage<Error> for Translator {
                 Action::OutputChar(ActionValue::Const(i)) => builder.build_call(&putchar, (llvm::Value::constant(*i),)),
                 Action::OutputChar(ActionValue::Dynamic(value)) => builder.build_call(&putchar, (values.get(value, &builder),)),
                 Action::OutputString(s) => builder.build_call(&puts, (module.add_string(s.clone()),)),
-
-                _ => unimplemented!("Translator hit unimplemented action: {:?}", action)
             }
         }
 
         match input[0].end() {
-            End::End => builder.build_ret()
+            End::End => builder.build_ret(),
         }
 
         Ok(module)

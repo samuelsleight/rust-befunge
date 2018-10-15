@@ -21,13 +21,19 @@ pub struct Builder {
     builder: *mut LLVMBuilder
 }
 
+impl Default for Builder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Builder {
-    pub fn new() -> Builder {
+    pub fn new() -> Self {
         let builder = unsafe {
             LLVMCreateBuilder()
         };
 
-        Builder {
+        Self {
             builder
         }
     }
@@ -40,7 +46,7 @@ impl Builder {
         function.build_call(self.builder, params)
     }
 
-    pub fn build_add(&self, lhs: Value<i32>, rhs: Value<i32>) -> Value<i32> {
+    pub fn build_add(&self, lhs: &Value<i32>, rhs: &Value<i32>) -> Value<i32> {
         unsafe {
             let name = CString::new("").unwrap();
             Value::new(LLVMBuildAdd(self.builder, lhs.value(), rhs.value(), name.to_bytes_with_nul().as_ptr() as *const i8))

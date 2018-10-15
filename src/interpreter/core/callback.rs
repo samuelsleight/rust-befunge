@@ -12,11 +12,11 @@ pub enum DynamicValue {
 }
 
 impl StackValue {
-    pub fn add(lhs: StackValue, rhs: StackValue) -> StackValue {
+    pub fn add(lhs: Self, rhs: Self) -> Self {
         StackValue::Dynamic(DynamicValue::Add(Box::new(lhs), Box::new(rhs)))
     }
 
-    pub fn mul(lhs: StackValue, rhs: StackValue) -> StackValue {
+    pub fn mul(lhs: Self, rhs: Self) -> Self {
         StackValue::Dynamic(DynamicValue::Mul(Box::new(lhs), Box::new(rhs)))
     }
 }
@@ -37,7 +37,7 @@ pub trait InterpreterCallback {
 
 pub trait DebugInspectable {
     fn inspect_stack(&self) -> &[StackValue];
-    fn inspect_pos(&self) -> (u32, u32);
+    fn inspect_pos(&self) -> (usize, usize);
     fn inspect_next(&self) -> char;
 }
 

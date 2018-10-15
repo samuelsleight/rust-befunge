@@ -28,8 +28,8 @@ pub enum End {
 }
 
 impl Block {
-    pub fn new(actions: Vec<Action>, end: End) -> Block {
-        Block {
+    pub fn new(actions: Vec<Action>, end: End) -> Self {
+        Self {
             actions,
             end
         }

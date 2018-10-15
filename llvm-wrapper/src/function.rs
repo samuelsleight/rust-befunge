@@ -19,8 +19,8 @@ pub struct Function<T: FunctionType> {
 }
 
 impl<T: FunctionType> Function<T> {
-    pub(crate) fn new(value: *mut LLVMValue) -> Function<T> {
-        Function {
+    pub(crate) fn new(value: *mut LLVMValue) -> Self {
+        Self {
             value,
             phantom: PhantomData
         }

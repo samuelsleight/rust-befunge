@@ -1,5 +1,8 @@
 #![feature(never_type)]
 
+#![cfg_attr(feature = "cargo-clippy", warn(clippy, clippy_pedantic))]
+#![cfg_attr(feature = "cargo-clippy", allow(module_inception, stutter, cast_sign_loss))]
+
 extern crate llvm_wrapper;
 extern crate pipeline;
 
@@ -83,9 +86,9 @@ enum Options {
 impl Options {
     fn options(&self) -> &SharedOptions {
         match self {
-            &Options::Compiler { ref options, .. } => options,
-            &Options::Interpreter { ref options } => options,
-            &Options::Debugger { ref options, .. } => options,
+            Options::Compiler { ref options, .. } |
+            Options::Interpreter { ref options } |
+            Options::Debugger { ref options, .. } => options,
         }
     }
 }

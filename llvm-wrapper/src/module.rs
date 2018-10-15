@@ -5,7 +5,7 @@ use std::{
         Formatter,
         self},
     ffi::{
-        CStr, 
+        CStr,
         CString
     },
 };
@@ -54,7 +54,7 @@ impl Debug for Module {
 }
 
 impl Module {
-    pub fn new<S: AsRef<str>, P: AsRef<Path>>(name: S, source: P) -> Module {
+    pub fn new<S: AsRef<str>, P: AsRef<Path>>(name: S, source: P) -> Self {
         let name = CString::new(name.as_ref()).unwrap();
         let source = CString::new(source.as_ref().as_os_str().to_str().unwrap()).unwrap();
 
@@ -67,7 +67,7 @@ impl Module {
             module
         };
 
-        Module {
+        Self {
             module
         }
     }
@@ -83,8 +83,8 @@ impl Module {
     }
 
     pub fn add_string<S: AsRef<str>>(&self, string: S) -> Value<String> {
-        let string = CString::new(string.as_ref()).unwrap();
-        let bytes = string.to_bytes_with_nul();
+        let cstring = CString::new(string.as_ref()).unwrap();
+        let bytes = cstring.to_bytes_with_nul();
 
         let global = {
             let name = CString::new("string").unwrap();
@@ -94,14 +94,14 @@ impl Module {
             }
         };
 
-        let string = unsafe {
+        let value = unsafe {
             LLVMConstString(bytes.as_ptr() as *const i8, bytes.len() as u32, 1)
         };
 
         unsafe {
             LLVMSetLinkage(global, LLVMLinkage::LLVMInternalLinkage);
             LLVMSetGlobalConstant(global, 1);
-            LLVMSetInitializer(global, string);
+            LLVMSetInitializer(global, value);
 
             Value::new(LLVMConstBitCast(global, String::value_type()))
         }

@@ -3,9 +3,9 @@ use pipeline::Stage;
 use crate::{
     error::Error,
     compiler::ir::{
-        Block, 
-        Action, 
-        ActionValue, 
+        Block,
+        Action,
+        ActionValue,
         End
     },
     interpreter::{
@@ -14,7 +14,7 @@ use crate::{
         core::{
             StackValue,
             DynamicValue,
-            InterpreterCallback, 
+            InterpreterCallback,
             InterpreterCore
         },
     }
@@ -28,14 +28,14 @@ pub struct State {
 }
 
 impl Compiler {
-    pub fn new() -> Compiler {
-        Compiler {}
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
 impl State {
-    fn new() -> State {
-        State {
+    fn new() -> Self {
+        Self {
             actions: Vec::new(),
             tag: 0
         }

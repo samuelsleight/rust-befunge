@@ -8,38 +8,46 @@ pub enum Delta {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Ip {
-    x: u32,
-    y: u32,
-    w: u32,
-    h: u32
+    x: usize,
+    y: usize,
+    w: usize,
+    h: usize
 }
 
 impl Delta {
-    fn values(&self) -> (i32, i32) {
+    fn values(self) -> (i32, i32) {
         match self {
-            &Delta::Left => (-1, 0),
-            &Delta::Right => (1, 0),
-            &Delta::Up => (0, -1),
-            &Delta::Down => (0, 1),
+            Delta::Left => (-1, 0),
+            Delta::Right => (1, 0),
+            Delta::Up => (0, -1),
+            Delta::Down => (0, 1),
         }
     }
 }
 
-fn clamped_add(value: u32, delta: i32, max: u32) -> u32 {
-    let mut value = value as i64 + delta as i64;
+fn clamped_add(value: usize, delta: i32, max: usize) -> usize {
+    if delta < 0 {
+        let delta = delta.abs() as usize;
 
-    if value < 0 {
-        value += max as i64
-    } else if value >= max as i64 {
-        value -= max as i64
+        if delta > value {
+            (value + max) - delta
+        } else {
+            value - delta
+        }
+    } else {
+        let result = value + delta as usize;
+
+        if result >= max {
+            result - max
+        } else {
+            result
+        }
     }
-
-    value as u32
 }
 
 impl Ip {
-    pub fn new(x: u32, y: u32, w: u32, h: u32) -> Ip {
-        Ip {
+    pub fn new(x: usize, y: usize, w: usize, h: usize) -> Self {
+        Self {
             x,
             y,
             w,
@@ -53,11 +61,11 @@ impl Ip {
         self.y = clamped_add(self.y, dy, self.h);
     }
 
-    pub fn row(&self) -> u32 {
+    pub fn row(&self) -> usize {
         self.x
     }
 
-    pub fn col(&self) -> u32 {
+    pub fn col(&self) -> usize {
         self.y
     }
 }

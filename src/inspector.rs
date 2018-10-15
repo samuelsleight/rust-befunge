@@ -13,8 +13,8 @@ pub struct Inspector<T> {
 }
 
 impl<T> Inspector<T> {
-    pub fn new(enabled: bool) -> Inspector<T> {
-        Inspector {
+    pub fn new(enabled: bool) -> Self {
+        Self {
             enabled,
             _phantom: PhantomData
         }

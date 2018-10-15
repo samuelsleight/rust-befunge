@@ -7,7 +7,7 @@ use crate::interpreter::core::{
 };
 
 use std::{
-    mem,
+    mem, char,
     io::{stdin, Read},
 };
 
@@ -15,7 +15,7 @@ pub struct Interpreter;
 pub struct NullDebugger;
 
 impl Interpreter {
-    pub fn stage() -> InterpreterCore<Interpreter, NullDebugger> {
+    pub fn stage() -> InterpreterCore<Self, NullDebugger> {
         InterpreterCore::new(Interpreter, NullDebugger)
     }
 }
@@ -25,7 +25,7 @@ impl InterpreterCallback for Interpreter {
 
     fn output(&mut self, value: StackValue) {
         match value {
-            StackValue::Const(i) => print!("{}", i as u8 as char),
+            StackValue::Const(i) => print!("{}", unsafe { char::from_u32_unchecked(i as u32) }),
             _ => panic!("Interpreter output received a dynamic value")
         }
     }

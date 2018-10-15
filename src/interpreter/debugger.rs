@@ -21,8 +21,8 @@ pub struct Debugger {
 }
 
 impl Debugger {
-    pub fn stage(trace: bool, cont: bool) -> InterpreterCore<Interpreter, Debugger> {
-        let debugger = Debugger {
+    pub fn stage(trace: bool, cont: bool) -> InterpreterCore<Interpreter, Self> {
+        let debugger = Self {
             mode: if cont {
                 DebugMode::Continue
             } else {
