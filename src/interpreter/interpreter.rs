@@ -43,5 +43,5 @@ impl InterpreterCallback for Interpreter {
 }
 
 impl<I: DebugInspectable> DebuggerCallback<I> for NullDebugger {
-    fn debug_step(&self, _: &I) {}
+    fn debug_step(&mut self, _: &I) {}
 }

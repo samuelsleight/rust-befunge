@@ -42,5 +42,5 @@ pub trait DebugInspectable {
 }
 
 pub trait DebuggerCallback<I: DebugInspectable> {
-    fn debug_step(&self, inspectable: &I);
+    fn debug_step(&mut self, inspectable: &I);
 }

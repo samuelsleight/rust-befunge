@@ -69,6 +69,12 @@ enum Options {
 
     #[structopt(name = "d")]
     Debugger {
+        #[structopt(long = "trace", short = "t")]
+        trace: bool,
+
+        #[structopt(long = "continue", short = "c")]
+        cont: bool,
+
         #[structopt(flatten)]
         options: SharedOptions
     },
@@ -79,7 +85,7 @@ impl Options {
         match self {
             &Options::Compiler { ref options, .. } => options,
             &Options::Interpreter { ref options } => options,
-            &Options::Debugger { ref options } => options,
+            &Options::Debugger { ref options, .. } => options,
         }
     }
 }
@@ -107,8 +113,8 @@ fn main() {
             .and_then(Interpreter::stage(), |_| ())
             .run(options.filename.clone()),
 
-        Options::Debugger { .. } => pipe
-            .and_then(Debugger::stage(), |_| ())
+        Options::Debugger { trace, cont, .. } => pipe
+            .and_then(Debugger::stage(trace, cont), |_| ())
             .run(options.filename.clone()),
     };
 
