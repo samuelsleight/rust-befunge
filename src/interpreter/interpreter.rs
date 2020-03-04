@@ -1,5 +1,7 @@
 use crate::interpreter::core::{
     StackValue,
+    DynamicValue,
+    QueuedState,
     InterpreterCallback,
     DebuggerCallback,
     DebugInspectable,
@@ -37,6 +39,10 @@ impl InterpreterCallback for Interpreter {
             .map(|_| buf[0] as char as i32)
             .map(StackValue::Const)
             .expect("Unable to read character from input")
+    }
+
+    fn if_zero(&mut self, value: DynamicValue, t: QueuedState, f: QueuedState) {
+        panic!("Interpreter if_zero received a dynamic value")
     }
 
     fn end(&mut self) {}

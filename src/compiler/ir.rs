@@ -24,7 +24,8 @@ pub enum Action {
 
 #[derive(Debug, Clone)]
 pub enum End {
-    End
+    End,
+    If(ActionValue, usize, usize)
 }
 
 impl Block {

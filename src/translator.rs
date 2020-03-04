@@ -72,6 +72,12 @@ impl Values {
                 builder.build_add(&lhs, &rhs)
             }
 
+            DynamicValue::Sub(ref lhs, ref rhs) => {
+                let lhs = self.get_value(&*lhs, builder);
+                let rhs = self.get_value(&*rhs, builder);
+                builder.build_sub(&lhs, &rhs)
+            }
+
             _ => unimplemented!("Unimplemented dynamic value type: {:?}", value),
         }
     }
@@ -91,22 +97,35 @@ impl Stage<Error> for Translator {
         let puts = module.add_function::<_, fn(String)>("puts");
 
         let function = module.add_function::<_, fn() -> i32>("main");
-        let block = function.add_block("entry");
 
         let builder = llvm::Builder::new();
-        builder.set_block(&block);
 
-        for action in input[0].actions() {
-            match action {
-                Action::Input(idx) => values.put(*idx, builder.build_call(&getchar, ())),
-                Action::OutputChar(ActionValue::Const(i)) => builder.build_call(&putchar, (llvm::Value::constant(*i),)),
-                Action::OutputChar(ActionValue::Dynamic(value)) => builder.build_call(&putchar, (values.get(value, &builder),)),
-                Action::OutputString(s) => builder.build_call(&puts, (module.add_string(s.clone()),)),
+        let blocks = input.iter().enumerate()
+            .map(|(idx, _)| if idx == 0 {
+                    function.add_block("entry")
+                } else {
+                    function.add_block(idx.to_string())
+                })
+            .collect::<Vec<llvm::Block>>();
+
+        for (idx, block) in input.iter().enumerate() {
+            builder.set_block(&blocks[idx]);
+
+            for action in block.actions() {
+                match action {
+                    Action::Input(idx) => values.put(*idx, builder.build_call(&getchar, ())),
+                    Action::OutputChar(ActionValue::Const(i)) => builder.build_call(&putchar, (llvm::Value::constant(*i),)),
+                    Action::OutputChar(ActionValue::Dynamic(value)) => builder.build_call(&putchar, (values.get(value, &builder),)),
+                    Action::OutputString(s) => builder.build_call(&puts, (module.add_string(s.clone()),)),
+                }
             }
-        }
 
-        match input[0].end() {
-            End::End => builder.build_ret(),
+            match block.end() {
+                End::End => builder.build_ret(),
+                End::If(ActionValue::Const(i), t, f) => builder.build_conditional_jump(&llvm::Value::constant(*i), &blocks[*t], &blocks[*f]),
+                End::If(ActionValue::Dynamic(value), t, f) => builder.build_conditional_jump(&values.get(value, &builder), &blocks[*t], &blocks[*f]),
+                _ => unimplemented!("Translator hit umimplemented block ending instruction")
+            }
         }
 
         Ok(module)

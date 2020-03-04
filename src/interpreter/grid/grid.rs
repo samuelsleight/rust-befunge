@@ -8,7 +8,7 @@ use crate::{
     interpreter::Ip,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Grid<T>(Box<[Box<[T]>]>);
 
 impl<T> Inspectable for Grid<T> where T: Debug {

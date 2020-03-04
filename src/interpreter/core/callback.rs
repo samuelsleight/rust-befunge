@@ -1,3 +1,5 @@
+pub use crate::interpreter::core::QueuedState;
+
 #[derive(Debug, Clone)]
 pub enum StackValue {
     Const(i32),
@@ -9,6 +11,7 @@ pub enum DynamicValue {
     Tagged(usize),
     Add(Box<StackValue>, Box<StackValue>),
     Mul(Box<StackValue>, Box<StackValue>),
+    Sub(Box<StackValue>, Box<StackValue>),
 }
 
 impl StackValue {
@@ -18,6 +21,10 @@ impl StackValue {
 
     pub fn mul(lhs: Self, rhs: Self) -> Self {
         StackValue::Dynamic(DynamicValue::Mul(Box::new(lhs), Box::new(rhs)))
+    }
+
+    pub fn sub(lhs: Self, rhs: Self) -> Self {
+        StackValue::Dynamic(DynamicValue::Sub(Box::new(lhs), Box::new(rhs)))
     }
 }
 
@@ -32,6 +39,8 @@ pub trait InterpreterCallback {
 
     fn output(&mut self, value: StackValue);
     fn input(&mut self) -> StackValue;
+
+    fn if_zero(&mut self, value: DynamicValue, t: QueuedState, f: QueuedState) -> Self::End;
     fn end(&mut self) -> Self::End;
 }
 

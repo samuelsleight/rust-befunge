@@ -20,4 +20,8 @@ impl Block {
             LLVMPositionBuilderAtEnd(builder, self.value);
         }
     }
+
+    pub(crate) fn value(&self) -> *mut LLVMBasicBlock {
+        self.value
+    }
 }

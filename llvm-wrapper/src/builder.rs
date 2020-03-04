@@ -2,11 +2,15 @@ use std::ffi::CString;
 
 use llvm_sys::{
     LLVMBuilder,
+    LLVMIntPredicate,
     core::{
         LLVMCreateBuilder,
         LLVMDisposeBuilder,
         LLVMBuildRet,
         LLVMBuildAdd,
+        LLVMBuildSub,
+        LLVMBuildICmp,
+        LLVMBuildCondBr
     }
 };
 
@@ -46,10 +50,26 @@ impl Builder {
         function.build_call(self.builder, params)
     }
 
+    pub fn build_conditional_jump(&self, value: &Value<i32>, t: &Block, f: &Block) {
+        unsafe {
+            let zero = Value::constant(0_i32);
+            let name = CString::new("").unwrap();
+            let cmp = LLVMBuildICmp(self.builder, LLVMIntPredicate::LLVMIntEQ, zero.value(), value.value(), name.to_bytes_with_nul().as_ptr() as *const i8);
+            LLVMBuildCondBr(self.builder, cmp, t.value(), f.value());
+        }
+    }
+
     pub fn build_add(&self, lhs: &Value<i32>, rhs: &Value<i32>) -> Value<i32> {
         unsafe {
             let name = CString::new("").unwrap();
             Value::new(LLVMBuildAdd(self.builder, lhs.value(), rhs.value(), name.to_bytes_with_nul().as_ptr() as *const i8))
+        }
+    }
+
+    pub fn build_sub(&self, lhs: &Value<i32>, rhs: &Value<i32>) -> Value<i32> {
+        unsafe {
+            let name = CString::new("").unwrap();
+            Value::new(LLVMBuildSub(self.builder, lhs.value(), rhs.value(), name.to_bytes_with_nul().as_ptr() as *const i8))
         }
     }
 

@@ -30,6 +30,7 @@ enum Stringmode {
     Stringmode
 }
 
+#[derive(Clone)]
 pub struct State {
     grid: Grid<char>,
     ip: Ip,
@@ -39,9 +40,17 @@ pub struct State {
     stringmode: Stringmode,
 }
 
+pub struct QueuedState(State);
+
+impl From<Grid<char>> for QueuedState {
+    fn from(grid: Grid<char>) -> Self {
+        QueuedState(State::new(grid, None))
+    }
+}
+
 impl State {
-    fn new(grid: Grid<char>) -> Self {
-        let ip = grid.ip();
+    fn new(grid: Grid<char>, ip: Option<Ip>) -> Self {
+        let ip = ip.unwrap_or_else(|| grid.ip());
 
         Self {
             grid,
@@ -78,6 +87,13 @@ impl State {
 
     fn set_delta(&mut self, delta: Delta) {
         self.delta = delta.into();
+    }
+
+    fn with_delta(&self, delta: Delta) -> Self {
+        Self {
+            delta: Some(delta),
+            ..self.clone()
+        }
     }
 
     fn toggle_stringmode(&mut self) {
@@ -118,8 +134,25 @@ where
     type Input = Grid<char>;
     type Output = Callback::End;
 
-    fn run(mut self, input: Self::Input) -> Result<Self::Output, Error> {
-        let mut state = State::new(input);
+    fn run(self, input: Self::Input) -> Result<Self::Output, Error> {
+        self.interpret(input.into())
+    }
+}
+
+impl<Callback, Debugger> InterpreterCore<Callback, Debugger>
+where
+    Callback: InterpreterCallback,
+    Debugger: DebuggerCallback<State>
+{
+    pub fn new(callback: Callback, debugger: Debugger) -> Self {
+        Self {
+            callback,
+            debugger
+        }
+    }
+
+    pub fn interpret(mut self, state: QueuedState) -> Result<<Self as Stage<Error>>::Output, Error> {
+        let mut state = state.0;
 
         while let Some(c) = state.next() {
             self.debugger.debug_step(&state);
@@ -165,7 +198,7 @@ where
                 // Subtraction
                 '-' => match (state.pop(), state.pop()) {
                     (StackValue::Const(lhs), StackValue::Const(rhs)) => state.push(lhs - rhs),
-                    (_, _) => unimplemented!("Subtraction of non-const values is not yet implemented")
+                    (lhs, rhs) => state.push(StackValue::sub(lhs, rhs))
                 },
 
                 // Duplication
@@ -187,7 +220,7 @@ where
                         state.set_delta(Delta::Left);
                     },
 
-                    _ => unimplemented!("Comparison of non-const values is not yet implemented")
+                    StackValue::Dynamic(value) => return Ok(self.callback.if_zero(value, QueuedState(state.with_delta(Delta::Right)), QueuedState(state.with_delta(Delta::Left))))
                 },
 
                 // If (Vertical)
@@ -199,7 +232,7 @@ where
                         state.set_delta(Delta::Up);
                     },
 
-                    _ => unimplemented!("Comparison of non-const values is not yet implemented")
+                    StackValue::Dynamic(value) => return Ok(self.callback.if_zero(value, QueuedState(state.with_delta(Delta::Down)), QueuedState(state.with_delta(Delta::Up))))
                 },
 
                 // Char IO
@@ -214,18 +247,5 @@ where
         }
 
         Err(Error::Interpreter(InterpreterError::EOF))
-    }
-}
-
-impl<Callback, Debugger> InterpreterCore<Callback, Debugger>
-where
-    Callback: InterpreterCallback,
-    Debugger: DebuggerCallback<State>
-{
-    pub fn new(callback: Callback, debugger: Debugger) -> Self {
-        Self {
-            callback,
-            debugger
-        }
     }
 }
