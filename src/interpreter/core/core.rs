@@ -180,8 +180,8 @@ where
                 '#' => state.advance(),
 
                 // Value Pushing
-                c @ '0' ... '9' => state.push(i32::from(c as u8 - b'0')),
-                c @ 'a' ... 'f' => state.push(i32::from((c as u8 + 10) - b'a')),
+                c @ '0' ..= '9' => state.push(i32::from(c as u8 - b'0')),
+                c @ 'a' ..= 'f' => state.push(i32::from((c as u8 + 10) - b'a')),
 
                 // Addition
                 '+' => match (state.pop(), state.pop()) {
