@@ -40,6 +40,8 @@ pub trait InterpreterCallback {
     fn output(&mut self, value: StackValue);
     fn input(&mut self) -> StackValue;
 
+    fn duplicate(&mut self, value: DynamicValue) -> StackValue;
+
     fn if_zero(&mut self, value: DynamicValue, t: QueuedState, f: QueuedState) -> Self::End;
     fn end(&mut self) -> Self::End;
 }

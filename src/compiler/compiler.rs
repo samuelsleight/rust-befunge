@@ -95,6 +95,18 @@ impl<'a> InterpreterCallback for State<'a> {
     fn end(&mut self) -> Self::End {
         Block::new(self.actions.clone(), End::End)
     }
+
+    fn duplicate(&mut self, value: DynamicValue) -> StackValue {
+        let tag = if let DynamicValue::Tagged(tag) = value {
+            tag
+        } else {
+            let tag = self.compiler.tag();
+            self.actions.push(Action::Tag(tag, value));
+            tag
+        };
+
+        StackValue::Dynamic(DynamicValue::Tagged(tag))
+    }
 }
 
 impl Stage<Error> for Compiler {

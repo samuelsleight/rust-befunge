@@ -46,6 +46,10 @@ impl InterpreterCallback for Interpreter {
     }
 
     fn end(&mut self) {}
+
+    fn duplicate(&mut self, value: DynamicValue) -> StackValue {
+        panic!("Interpreter duplicate received a dynamic value")
+    }
 }
 
 impl<I: DebugInspectable> DebuggerCallback<I> for NullDebugger {

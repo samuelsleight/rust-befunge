@@ -117,6 +117,10 @@ impl Stage<Error> for Translator {
                     Action::OutputChar(ActionValue::Const(i)) => builder.build_call(&putchar, (llvm::Value::constant(*i),)),
                     Action::OutputChar(ActionValue::Dynamic(value)) => builder.build_call(&putchar, (values.get(value, &builder),)),
                     Action::OutputString(s) => builder.build_call(&puts, (module.add_string(s.clone()),)),
+                    Action::Tag(idx, value) => {
+                        let value = values.get(value, &builder);
+                        values.put(*idx, value)
+                    },
                 }
             }
 

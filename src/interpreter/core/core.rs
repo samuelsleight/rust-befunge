@@ -208,7 +208,11 @@ where
                         state.push(value);
                     },
 
-                    _ => unimplemented!("Duplication of non-const values is not yet implemented")
+                    StackValue::Dynamic(value) => {
+                        let value = self.callback.duplicate(value);
+                        state.push(value.clone());
+                        state.push(value);
+                    },
                 },
 
                 // If (Horizontal)

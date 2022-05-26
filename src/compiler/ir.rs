@@ -19,7 +19,8 @@ pub enum ActionValue {
 pub enum Action {
     OutputChar(ActionValue),
     OutputString(String),
-    Input(usize)
+    Input(usize),
+    Tag(usize, DynamicValue)
 }
 
 #[derive(Debug, Clone)]
