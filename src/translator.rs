@@ -128,7 +128,6 @@ impl Stage<Error> for Translator {
                 End::End => builder.build_ret(),
                 End::If(ActionValue::Const(i), t, f) => builder.build_conditional_jump(&llvm::Value::constant(*i), &blocks[*t], &blocks[*f]),
                 End::If(ActionValue::Dynamic(value), t, f) => builder.build_conditional_jump(&values.get(value, &builder), &blocks[*t], &blocks[*f]),
-                _ => unimplemented!("Translator hit umimplemented block ending instruction")
             }
         }
 

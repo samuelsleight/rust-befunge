@@ -9,7 +9,7 @@ use crate::interpreter::core::{
 };
 
 use std::{
-    mem, char,
+    char,
     io::{stdin, Read},
 };
 
@@ -33,7 +33,7 @@ impl InterpreterCallback for Interpreter {
     }
 
     fn input(&mut self) -> StackValue {
-        let mut buf: [u8; 1] = unsafe { mem::uninitialized() };
+        let mut buf = [0u8; 1];
         stdin()
             .read(&mut buf)
             .map(|_| buf[0] as char as i32)
@@ -41,13 +41,13 @@ impl InterpreterCallback for Interpreter {
             .expect("Unable to read character from input")
     }
 
-    fn if_zero(&mut self, value: DynamicValue, t: QueuedState, f: QueuedState) {
+    fn if_zero(&mut self, _: DynamicValue, _: QueuedState, _: QueuedState) {
         panic!("Interpreter if_zero received a dynamic value")
     }
 
     fn end(&mut self) {}
 
-    fn duplicate(&mut self, value: DynamicValue) -> StackValue {
+    fn duplicate(&mut self, _: DynamicValue) -> StackValue {
         panic!("Interpreter duplicate received a dynamic value")
     }
 }
