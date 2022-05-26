@@ -3,7 +3,7 @@ pub use crate::interpreter::core::QueuedState;
 #[derive(Debug, Clone)]
 pub enum StackValue {
     Const(i32),
-    Dynamic(DynamicValue)
+    Dynamic(DynamicValue),
 }
 
 #[derive(Debug, Clone)]

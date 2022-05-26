@@ -1,28 +1,17 @@
 use std::ffi::CString;
 
 use llvm_sys::{
-    LLVMBuilder,
-    LLVMIntPredicate,
     core::{
-        LLVMCreateBuilder,
-        LLVMDisposeBuilder,
-        LLVMBuildRet,
-        LLVMBuildAdd,
-        LLVMBuildSub,
-        LLVMBuildICmp,
-        LLVMBuildCondBr
-    }
+        LLVMBuildAdd, LLVMBuildCondBr, LLVMBuildICmp, LLVMBuildRet, LLVMBuildSub,
+        LLVMCreateBuilder, LLVMDisposeBuilder,
+    },
+    LLVMBuilder, LLVMIntPredicate,
 };
 
-use crate::{
-    Block,
-    Function,
-    FunctionType,
-    Value
-};
+use crate::{Block, Function, FunctionType, Value};
 
 pub struct Builder {
-    builder: *mut LLVMBuilder
+    builder: *mut LLVMBuilder,
 }
 
 impl Default for Builder {
@@ -33,20 +22,20 @@ impl Default for Builder {
 
 impl Builder {
     pub fn new() -> Self {
-        let builder = unsafe {
-            LLVMCreateBuilder()
-        };
+        let builder = unsafe { LLVMCreateBuilder() };
 
-        Self {
-            builder
-        }
+        Self { builder }
     }
 
     pub fn set_block(&self, block: &Block) {
         block.set_to_builder(self.builder);
     }
 
-    pub fn build_call<T: FunctionType>(&self, function: &Function<T>, params: T::Params) -> T::Return {
+    pub fn build_call<T: FunctionType>(
+        &self,
+        function: &Function<T>,
+        params: T::Params,
+    ) -> T::Return {
         function.build_call(self.builder, params)
     }
 
@@ -54,7 +43,13 @@ impl Builder {
         unsafe {
             let zero = Value::constant(0_i32);
             let name = CString::new("").unwrap();
-            let cmp = LLVMBuildICmp(self.builder, LLVMIntPredicate::LLVMIntEQ, zero.value(), value.value(), name.to_bytes_with_nul().as_ptr() as *const i8);
+            let cmp = LLVMBuildICmp(
+                self.builder,
+                LLVMIntPredicate::LLVMIntEQ,
+                zero.value(),
+                value.value(),
+                name.to_bytes_with_nul().as_ptr() as *const i8,
+            );
             LLVMBuildCondBr(self.builder, cmp, t.value(), f.value());
         }
     }
@@ -62,14 +57,24 @@ impl Builder {
     pub fn build_add(&self, lhs: &Value<i32>, rhs: &Value<i32>) -> Value<i32> {
         unsafe {
             let name = CString::new("").unwrap();
-            Value::new(LLVMBuildAdd(self.builder, lhs.value(), rhs.value(), name.to_bytes_with_nul().as_ptr() as *const i8))
+            Value::new(LLVMBuildAdd(
+                self.builder,
+                lhs.value(),
+                rhs.value(),
+                name.to_bytes_with_nul().as_ptr() as *const i8,
+            ))
         }
     }
 
     pub fn build_sub(&self, lhs: &Value<i32>, rhs: &Value<i32>) -> Value<i32> {
         unsafe {
             let name = CString::new("").unwrap();
-            Value::new(LLVMBuildSub(self.builder, lhs.value(), rhs.value(), name.to_bytes_with_nul().as_ptr() as *const i8))
+            Value::new(LLVMBuildSub(
+                self.builder,
+                lhs.value(),
+                rhs.value(),
+                name.to_bytes_with_nul().as_ptr() as *const i8,
+            ))
         }
     }
 

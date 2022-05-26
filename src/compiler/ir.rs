@@ -1,12 +1,9 @@
-use crate::{
-    interpreter::core::DynamicValue,
-    inspector::Inspectable
-};
+use crate::{inspector::Inspectable, interpreter::core::DynamicValue};
 
 #[derive(Debug, Clone)]
 pub struct Block {
     actions: Vec<Action>,
-    end: End
+    end: End,
 }
 
 #[derive(Debug, Clone)]
@@ -20,21 +17,18 @@ pub enum Action {
     OutputChar(ActionValue),
     OutputString(String),
     Input(usize),
-    Tag(usize, DynamicValue)
+    Tag(usize, DynamicValue),
 }
 
 #[derive(Debug, Clone)]
 pub enum End {
     End,
-    If(ActionValue, usize, usize)
+    If(ActionValue, usize, usize),
 }
 
 impl Block {
     pub fn new(actions: Vec<Action>, end: End) -> Self {
-        Self {
-            actions,
-            end
-        }
+        Self { actions, end }
     }
 
     pub fn actions(&self) -> &[Action] {

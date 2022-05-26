@@ -2,24 +2,13 @@ use pipeline::Stage;
 
 use llvm_wrapper as llvm;
 
-use std::{
-    collections::HashMap,
-    path::PathBuf
-};
+use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
+    compiler::ir::{Action, ActionValue, Block, End},
     error::Error,
     inspector::Inspectable,
-    interpreter::core::{
-        StackValue,
-        DynamicValue,
-    },
-    compiler::ir::{
-        Block,
-        Action,
-        ActionValue,
-        End
-    },
+    interpreter::core::{DynamicValue, StackValue},
 };
 
 impl Inspectable for llvm::Module {
@@ -34,9 +23,7 @@ pub struct Translator {
 
 impl Translator {
     pub fn new(source: PathBuf) -> Self {
-        Self {
-            source
-        }
+        Self { source }
     }
 }
 
@@ -64,7 +51,9 @@ impl Values {
 
     fn get(&mut self, value: &DynamicValue, builder: &llvm::Builder) -> llvm::Value<i32> {
         match value {
-            DynamicValue::Tagged(idx) => self.values.get(&idx).expect("Invalid tagged value").clone(),
+            DynamicValue::Tagged(idx) => {
+                self.values.get(&idx).expect("Invalid tagged value").clone()
+            }
 
             DynamicValue::Add(ref lhs, ref rhs) => {
                 let lhs = self.get_value(&*lhs, builder);
@@ -100,12 +89,16 @@ impl Stage<Error> for Translator {
 
         let builder = llvm::Builder::new();
 
-        let blocks = input.iter().enumerate()
-            .map(|(idx, _)| if idx == 0 {
+        let blocks = input
+            .iter()
+            .enumerate()
+            .map(|(idx, _)| {
+                if idx == 0 {
                     function.add_block("entry")
                 } else {
                     function.add_block(idx.to_string())
-                })
+                }
+            })
             .collect::<Vec<llvm::Block>>();
 
         for (idx, block) in input.iter().enumerate() {
@@ -114,20 +107,34 @@ impl Stage<Error> for Translator {
             for action in block.actions() {
                 match action {
                     Action::Input(idx) => values.put(*idx, builder.build_call(&getchar, ())),
-                    Action::OutputChar(ActionValue::Const(i)) => builder.build_call(&putchar, (llvm::Value::constant(*i),)),
-                    Action::OutputChar(ActionValue::Dynamic(value)) => builder.build_call(&putchar, (values.get(value, &builder),)),
-                    Action::OutputString(s) => builder.build_call(&puts, (module.add_string(s.clone()),)),
+                    Action::OutputChar(ActionValue::Const(i)) => {
+                        builder.build_call(&putchar, (llvm::Value::constant(*i),))
+                    }
+                    Action::OutputChar(ActionValue::Dynamic(value)) => {
+                        builder.build_call(&putchar, (values.get(value, &builder),))
+                    }
+                    Action::OutputString(s) => {
+                        builder.build_call(&puts, (module.add_string(s.clone()),))
+                    }
                     Action::Tag(idx, value) => {
                         let value = values.get(value, &builder);
                         values.put(*idx, value)
-                    },
+                    }
                 }
             }
 
             match block.end() {
                 End::End => builder.build_ret(),
-                End::If(ActionValue::Const(i), t, f) => builder.build_conditional_jump(&llvm::Value::constant(*i), &blocks[*t], &blocks[*f]),
-                End::If(ActionValue::Dynamic(value), t, f) => builder.build_conditional_jump(&values.get(value, &builder), &blocks[*t], &blocks[*f]),
+                End::If(ActionValue::Const(i), t, f) => builder.build_conditional_jump(
+                    &llvm::Value::constant(*i),
+                    &blocks[*t],
+                    &blocks[*f],
+                ),
+                End::If(ActionValue::Dynamic(value), t, f) => builder.build_conditional_jump(
+                    &values.get(value, &builder),
+                    &blocks[*t],
+                    &blocks[*f],
+                ),
             }
         }
 

@@ -1,30 +1,18 @@
 use pipeline::Stage;
 
 use crate::{
+    compiler::ir::{Action, ActionValue, Block, End},
     error::Error,
-    compiler::ir::{
-        Block,
-        Action,
-        ActionValue,
-        End
-    },
     interpreter::{
-        Grid,
-        NullDebugger,
-        core::{
-            QueuedState,
-            StackValue,
-            DynamicValue,
-            InterpreterCallback,
-            InterpreterCore
-        },
-    }
+        core::{DynamicValue, InterpreterCallback, InterpreterCore, QueuedState, StackValue},
+        Grid, NullDebugger,
+    },
 };
 
 pub struct Compiler {
     tag: usize,
     idx: usize,
-    queue: Vec<QueuedState>
+    queue: Vec<QueuedState>,
 }
 
 pub struct State<'a> {
@@ -37,7 +25,7 @@ impl Compiler {
         Self {
             tag: 0,
             idx: 0,
-            queue: Vec::new()
+            queue: Vec::new(),
         }
     }
 
@@ -76,7 +64,9 @@ impl<'a> InterpreterCallback for State<'a> {
     fn output(&mut self, value: StackValue) {
         match value {
             StackValue::Const(i) => self.actions.push(Action::OutputChar(ActionValue::Const(i))),
-            StackValue::Dynamic(value) => self.actions.push(Action::OutputChar(ActionValue::Dynamic(value)))
+            StackValue::Dynamic(value) => self
+                .actions
+                .push(Action::OutputChar(ActionValue::Dynamic(value))),
         }
     }
 
@@ -89,7 +79,10 @@ impl<'a> InterpreterCallback for State<'a> {
     fn if_zero(&mut self, value: DynamicValue, t: QueuedState, f: QueuedState) -> Self::End {
         let t_idx = self.compiler.push(t);
         let f_idx = self.compiler.push(f);
-        Block::new(self.actions.clone(), End::If(ActionValue::Dynamic(value), t_idx, f_idx))
+        Block::new(
+            self.actions.clone(),
+            End::If(ActionValue::Dynamic(value), t_idx, f_idx),
+        )
     }
 
     fn end(&mut self) -> Self::End {
@@ -124,5 +117,4 @@ impl Stage<Error> for Compiler {
 
         Ok(blocks)
     }
-
 }

@@ -2,21 +2,18 @@ use pipeline::Stage;
 
 use crate::error::Error;
 
-use std::{
-    path::PathBuf,
-    marker::PhantomData,
-};
+use std::{marker::PhantomData, path::PathBuf};
 
 pub struct Inspector<T> {
     enabled: bool,
-    _phantom: PhantomData<T>
+    _phantom: PhantomData<T>,
 }
 
 impl<T> Inspector<T> {
     pub fn new(enabled: bool) -> Self {
         Self {
             enabled,
-            _phantom: PhantomData
+            _phantom: PhantomData,
         }
     }
 }
@@ -31,13 +28,15 @@ impl Inspectable for PathBuf {
     }
 }
 
-impl<T> Stage<Error> for Inspector<T> where T: Inspectable {
+impl<T> Stage<Error> for Inspector<T>
+where
+    T: Inspectable,
+{
     type Input = T;
     type Output = T;
 
     fn run(self, input: Self::Input) -> Result<Self::Output, Error> {
-        if self.enabled
-        {
+        if self.enabled {
             input.inspect();
         }
 

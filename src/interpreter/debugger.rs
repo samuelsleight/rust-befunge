@@ -1,23 +1,19 @@
 use std::io::{self, BufRead};
 
 use crate::interpreter::{
+    core::{DebugInspectable, DebuggerCallback, InterpreterCore},
     Interpreter,
-    core::{
-        DebuggerCallback,
-        DebugInspectable,
-        InterpreterCore
-    }
 };
 
 #[derive(Clone, Copy)]
 enum DebugMode {
     Step,
-    Continue
+    Continue,
 }
 
 pub struct Debugger {
     mode: DebugMode,
-    trace: bool
+    trace: bool,
 }
 
 impl Debugger {
@@ -29,7 +25,7 @@ impl Debugger {
                 DebugMode::Step
             },
 
-            trace
+            trace,
         };
 
         InterpreterCore::new(Interpreter, debugger)
@@ -38,7 +34,11 @@ impl Debugger {
     pub fn trace<I: DebugInspectable>(&self, inspectable: &I) {
         println!();
         println!("Stack: {:?}", inspectable.inspect_stack());
-        println!("Next: {:?}: {}", inspectable.inspect_pos(), inspectable.inspect_next());
+        println!(
+            "Next: {:?}: {}",
+            inspectable.inspect_pos(),
+            inspectable.inspect_next()
+        );
     }
 }
 
@@ -52,12 +52,14 @@ impl<I: DebugInspectable> DebuggerCallback<I> for Debugger {
                 match &input as &str {
                     "c" => self.mode = DebugMode::Continue,
                     "t" => self.trace = !self.trace,
-                    _ => ()
+                    _ => (),
                 }
             }
 
-            DebugMode::Continue => if self.trace {
-                self.trace(inspectable);
+            DebugMode::Continue => {
+                if self.trace {
+                    self.trace(inspectable);
+                }
             }
         }
     }

@@ -1,7 +1,9 @@
 #![feature(never_type)]
-
 #![cfg_attr(feature = "cargo-clippy", warn(clippy, clippy_pedantic))]
-#![cfg_attr(feature = "cargo-clippy", allow(module_inception, stutter, cast_sign_loss))]
+#![cfg_attr(
+    feature = "cargo-clippy",
+    allow(module_inception, stutter, cast_sign_loss)
+)]
 
 extern crate llvm_wrapper;
 extern crate pipeline;
@@ -13,20 +15,20 @@ use structopt::StructOpt;
 use pipeline::{Err, Pipeline, RunPipeline};
 
 use crate::{
-    inspector::Inspector,
-    reader::FileReader,
-    interpreter::{Interpreter, Debugger},
     compiler::Compiler,
-    optimizer::{Optimizer, OptimizationLevel},
+    inspector::Inspector,
+    interpreter::{Debugger, Interpreter},
+    optimizer::{OptimizationLevel, Optimizer},
+    reader::FileReader,
     translator::Translator,
 };
 
+mod compiler;
 mod error;
 mod inspector;
-mod reader;
 mod interpreter;
-mod compiler;
 mod optimizer;
+mod reader;
 mod translator;
 
 #[derive(Debug, StructOpt)]
@@ -50,24 +52,24 @@ struct Debug {
     ir: bool,
 
     #[structopt(long = "debug-llvm")]
-    llvm: bool
+    llvm: bool,
 }
 
 #[derive(Debug, StructOpt)]
 enum Options {
     #[structopt(name = "c")]
     Compiler {
-        #[structopt(long = "optimize", short = "O", default_value="", parse(from_str))]
+        #[structopt(long = "optimize", short = "O", default_value = "", parse(from_str))]
         optimize: OptimizationLevel,
 
         #[structopt(flatten)]
-        options: SharedOptions
+        options: SharedOptions,
     },
 
     #[structopt(name = "i")]
     Interpreter {
         #[structopt(flatten)]
-        options: SharedOptions
+        options: SharedOptions,
     },
 
     #[structopt(name = "d")]
@@ -79,16 +81,16 @@ enum Options {
         cont: bool,
 
         #[structopt(flatten)]
-        options: SharedOptions
+        options: SharedOptions,
     },
 }
 
 impl Options {
     fn options(&self) -> &SharedOptions {
         match self {
-            Options::Compiler { ref options, .. } |
-            Options::Interpreter { ref options } |
-            Options::Debugger { ref options, .. } => options,
+            Options::Compiler { ref options, .. }
+            | Options::Interpreter { ref options }
+            | Options::Debugger { ref options, .. } => options,
         }
     }
 }
@@ -97,8 +99,7 @@ fn main() {
     let command = Options::from_args();
     let options = command.options();
 
-    let pipe = pipeline
-        ::pipeline(FileReader::new(), |_| ())
+    let pipe = pipeline::pipeline(FileReader::new(), |_| ())
         .and_then(Inspector::new(options.debug.file), |_| ());
 
     let result = match command {

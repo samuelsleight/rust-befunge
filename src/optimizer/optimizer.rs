@@ -1,19 +1,15 @@
-use pipeline::{
-    self,
-    Stage,
-    RunPipeline
-};
+use pipeline::{self, RunPipeline, Stage};
 
 use crate::{
-    error::Error,
     compiler::ir::Block,
+    error::Error,
     optimizer::pass::{Pass, StringPrintPass},
 };
 
 #[derive(Debug, Clone, Copy)]
 pub enum OptimizationLevel {
     None,
-    All
+    All,
 }
 
 impl From<&str> for OptimizationLevel {
@@ -27,14 +23,12 @@ impl From<&str> for OptimizationLevel {
 }
 
 pub struct Optimizer {
-    level: OptimizationLevel
+    level: OptimizationLevel,
 }
 
 impl Optimizer {
     pub fn new(level: OptimizationLevel) -> Self {
-        Self {
-            level
-        }
+        Self { level }
     }
 }
 
@@ -45,10 +39,9 @@ impl Stage<Error> for Optimizer {
     fn run(self, input: Self::Input) -> Result<Self::Output, Error> {
         match self.level {
             OptimizationLevel::None => Ok(input),
-            OptimizationLevel::All => Ok(pipeline
-                ::pipeline(StringPrintPass::new(), |_| ())
+            OptimizationLevel::All => Ok(pipeline::pipeline(StringPrintPass::new(), |_| ())
                 .run(input)
-                .unwrap())
+                .unwrap()),
         }
     }
 }

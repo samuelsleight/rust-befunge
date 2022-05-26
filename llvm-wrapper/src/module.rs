@@ -1,45 +1,23 @@
 use std::{
+    ffi::{CStr, CString},
+    fmt::{self, Debug, Formatter},
     path::Path,
-    fmt::{
-        Debug,
-        Formatter,
-        self},
-    ffi::{
-        CStr,
-        CString
-    },
 };
 
 use llvm_sys::{
-    LLVMModule,
-    LLVMLinkage,
     core::{
-        LLVMArrayType,
-        LLVMInt8Type,
-        LLVMModuleCreateWithName,
+        LLVMAddFunction, LLVMAddGlobal, LLVMArrayType, LLVMConstBitCast, LLVMConstString,
+        LLVMDisposeMessage, LLVMDisposeModule, LLVMInt8Type, LLVMModuleCreateWithName,
+        LLVMPrintModuleToString, LLVMSetGlobalConstant, LLVMSetInitializer, LLVMSetLinkage,
         LLVMSetSourceFileName,
-        LLVMPrintModuleToString,
-        LLVMAddFunction,
-        LLVMDisposeModule,
-        LLVMDisposeMessage,
-        LLVMConstString,
-        LLVMAddGlobal,
-        LLVMSetLinkage,
-        LLVMSetGlobalConstant,
-        LLVMSetInitializer,
-        LLVMConstBitCast
     },
+    LLVMLinkage, LLVMModule,
 };
 
-use crate::{
-    types::ValueType,
-    FunctionType,
-    Function,
-    Value
-};
+use crate::{types::ValueType, Function, FunctionType, Value};
 
 pub struct Module {
-    module: *mut LLVMModule
+    module: *mut LLVMModule,
 }
 
 impl Debug for Module {
@@ -62,21 +40,27 @@ impl Module {
             let module = LLVMModuleCreateWithName(name.to_bytes_with_nul().as_ptr() as *const i8);
 
             let source_bytes = source.to_bytes();
-            LLVMSetSourceFileName(module, source_bytes.as_ptr() as *const i8, source_bytes.len());
+            LLVMSetSourceFileName(
+                module,
+                source_bytes.as_ptr() as *const i8,
+                source_bytes.len(),
+            );
 
             module
         };
 
-        Self {
-            module
-        }
+        Self { module }
     }
 
     pub fn add_function<S: AsRef<str>, T: FunctionType>(&self, name: S) -> Function<T> {
         let name = CString::new(name.as_ref()).unwrap();
 
         let function = unsafe {
-            LLVMAddFunction(self.module, name.to_bytes_with_nul().as_ptr() as *const i8, T::function_type())
+            LLVMAddFunction(
+                self.module,
+                name.to_bytes_with_nul().as_ptr() as *const i8,
+                T::function_type(),
+            )
         };
 
         Function::new(function)
@@ -90,13 +74,15 @@ impl Module {
             let name = CString::new("string").unwrap();
 
             unsafe {
-                LLVMAddGlobal(self.module, LLVMArrayType(LLVMInt8Type(), bytes.len() as u32), name.to_bytes_with_nul().as_ptr() as *const i8)
+                LLVMAddGlobal(
+                    self.module,
+                    LLVMArrayType(LLVMInt8Type(), bytes.len() as u32),
+                    name.to_bytes_with_nul().as_ptr() as *const i8,
+                )
             }
         };
 
-        let value = unsafe {
-            LLVMConstString(bytes.as_ptr() as *const i8, bytes.len() as u32, 1)
-        };
+        let value = unsafe { LLVMConstString(bytes.as_ptr() as *const i8, bytes.len() as u32, 1) };
 
         unsafe {
             LLVMSetLinkage(global, LLVMLinkage::LLVMInternalLinkage);

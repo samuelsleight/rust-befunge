@@ -1,28 +1,21 @@
 use std::marker::PhantomData;
 
-use llvm_sys::{
-    LLVMValue,
-    LLVMBuilder,
-    core::LLVMAppendBasicBlock,
-};
+use llvm_sys::{core::LLVMAppendBasicBlock, LLVMBuilder, LLVMValue};
 
-use crate::{
-    Block,
-    FunctionType
-};
+use crate::{Block, FunctionType};
 
 use std::ffi::CString;
 
 pub struct Function<T: FunctionType> {
     value: *mut LLVMValue,
-    phantom: PhantomData<T>
+    phantom: PhantomData<T>,
 }
 
 impl<T: FunctionType> Function<T> {
     pub(crate) fn new(value: *mut LLVMValue) -> Self {
         Self {
             value,
-            phantom: PhantomData
+            phantom: PhantomData,
         }
     }
 

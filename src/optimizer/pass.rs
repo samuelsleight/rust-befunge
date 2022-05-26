@@ -1,15 +1,8 @@
 use pipeline::Stage;
 
-use std::{
-    char,
-    marker::PhantomData
-};
+use std::{char, marker::PhantomData};
 
-use crate::compiler::ir::{
-    Action,
-    ActionValue,
-    Block
-};
+use crate::compiler::ir::{Action, ActionValue, Block};
 
 pub struct PassWrapper<T: ?Sized>(PhantomData<T>);
 
@@ -25,7 +18,10 @@ pub trait BlockPass {
     fn optimize_block(block: Block) -> Block;
 }
 
-impl<T> Stage<!> for PassWrapper<T> where T: Pass {
+impl<T> Stage<!> for PassWrapper<T>
+where
+    T: Pass,
+{
     type Input = Vec<Block>;
     type Output = Vec<Block>;
 
@@ -34,7 +30,10 @@ impl<T> Stage<!> for PassWrapper<T> where T: Pass {
     }
 }
 
-impl<T> Pass for T where T: BlockPass {
+impl<T> Pass for T
+where
+    T: BlockPass,
+{
     fn optimize(input: Vec<Block>) -> Vec<Block> {
         input.into_iter().map(Self::optimize_block).collect()
     }

@@ -1,17 +1,10 @@
 use std::ffi::CString;
 
 use llvm_sys::{
-    LLVMType,
-    LLVMValue,
-    LLVMBuilder,
     core::{
-        LLVMVoidType,
-        LLVMInt8Type,
-        LLVMInt32Type,
-        LLVMPointerType,
-        LLVMFunctionType,
-        LLVMBuildCall,
-    }
+        LLVMBuildCall, LLVMFunctionType, LLVMInt32Type, LLVMInt8Type, LLVMPointerType, LLVMVoidType,
+    },
+    LLVMBuilder, LLVMType, LLVMValue,
 };
 
 use crate::Value;
@@ -21,7 +14,11 @@ pub trait FunctionType {
     type Return;
 
     fn function_type() -> *mut LLVMType;
-    fn build_call(builder: *mut LLVMBuilder, function: *mut LLVMValue, params: Self::Params) -> Self::Return;
+    fn build_call(
+        builder: *mut LLVMBuilder,
+        function: *mut LLVMValue,
+        params: Self::Params,
+    ) -> Self::Return;
 }
 
 pub trait ValueType {
@@ -37,16 +34,14 @@ macro_rules! value_type {
             type ReturnType = Value<$t>;
 
             fn value_type() -> *mut LLVMType {
-                unsafe {
-                    $e
-                }
+                unsafe { $e }
             }
 
             fn as_return_value(value: *mut LLVMValue) -> Self::ReturnType {
                 Value::<Self>::new(value)
             }
         }
-    }
+    };
 }
 
 value_type!(i32 => LLVMInt32Type());
@@ -56,9 +51,7 @@ impl ValueType for () {
     type ReturnType = ();
 
     fn value_type() -> *mut LLVMType {
-        unsafe {
-            LLVMVoidType()
-        }
+        unsafe { LLVMVoidType() }
     }
 
     fn as_return_value(_value: *mut LLVMValue) -> Self::ReturnType {
@@ -67,20 +60,30 @@ impl ValueType for () {
 }
 
 fn function_type(ret: *mut LLVMType, params: &[*mut LLVMType]) -> *mut LLVMType {
-    unsafe {
-        LLVMFunctionType(ret, params.as_ptr() as *mut _, params.len() as u32, 0)
-    }
+    unsafe { LLVMFunctionType(ret, params.as_ptr() as *mut _, params.len() as u32, 0) }
 }
 
-fn build_call(builder: *mut LLVMBuilder, function: *mut LLVMValue, params: &[*mut LLVMValue]) -> *mut LLVMValue
-{
+fn build_call(
+    builder: *mut LLVMBuilder,
+    function: *mut LLVMValue,
+    params: &[*mut LLVMValue],
+) -> *mut LLVMValue {
     unsafe {
         let name = CString::new("").unwrap();
-        LLVMBuildCall(builder, function, params.as_ptr() as *mut _, params.len() as u32, name.to_bytes_with_nul().as_ptr() as *const i8)
+        LLVMBuildCall(
+            builder,
+            function,
+            params.as_ptr() as *mut _,
+            params.len() as u32,
+            name.to_bytes_with_nul().as_ptr() as *const i8,
+        )
     }
 }
 
-impl<R> FunctionType for fn() -> R where R: ValueType {
+impl<R> FunctionType for fn() -> R
+where
+    R: ValueType,
+{
     type Params = ();
     type Return = R::ReturnType;
 
@@ -88,12 +91,20 @@ impl<R> FunctionType for fn() -> R where R: ValueType {
         function_type(R::value_type(), &[])
     }
 
-    fn build_call(builder: *mut LLVMBuilder, function: *mut LLVMValue, _: Self::Params) -> Self::Return {
+    fn build_call(
+        builder: *mut LLVMBuilder,
+        function: *mut LLVMValue,
+        _: Self::Params,
+    ) -> Self::Return {
         R::as_return_value(build_call(builder, function, &[]))
     }
 }
 
-impl<T, R> FunctionType for fn(T) -> R where R: ValueType, T: ValueType {
+impl<T, R> FunctionType for fn(T) -> R
+where
+    R: ValueType,
+    T: ValueType,
+{
     type Params = (Value<T>,);
     type Return = R::ReturnType;
 
@@ -101,7 +112,11 @@ impl<T, R> FunctionType for fn(T) -> R where R: ValueType, T: ValueType {
         function_type(R::value_type(), &[T::value_type()])
     }
 
-    fn build_call(builder: *mut LLVMBuilder, function: *mut LLVMValue, params: Self::Params) -> Self::Return {
+    fn build_call(
+        builder: *mut LLVMBuilder,
+        function: *mut LLVMValue,
+        params: Self::Params,
+    ) -> Self::Return {
         R::as_return_value(build_call(builder, function, &[params.0.value()]))
     }
 }

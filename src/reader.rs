@@ -1,15 +1,12 @@
 use std::{
     cmp,
-    path::Path,
     fs::File,
-    marker::PhantomData,
     io::{BufRead, BufReader},
+    marker::PhantomData,
+    path::Path,
 };
 
-use crate::{
-    error::Error,
-    interpreter::Grid,
-};
+use crate::{error::Error, interpreter::Grid};
 
 use pipeline::Stage;
 
@@ -21,7 +18,10 @@ impl<P> FileReader<P> {
     }
 }
 
-impl<P> Stage<Error> for FileReader<P> where P: AsRef<Path> {
+impl<P> Stage<Error> for FileReader<P>
+where
+    P: AsRef<Path>,
+{
     type Input = P;
     type Output = Grid<char>;
 
@@ -30,19 +30,22 @@ impl<P> Stage<Error> for FileReader<P> where P: AsRef<Path> {
 
         File::open(path)
             .and_then(|file| BufReader::new(file).lines().collect::<Result<Vec<_>, _>>())
-            .map(|strings| strings.into_iter()
-                .map(|string| {
-                    let vec = string.chars().collect::<Vec<_>>();
-                    len = cmp::max(vec.len(), len);
-                    vec
-                })
-                .collect::<Vec<_>>()
-                .into_iter()
-                .map(|mut vec| {
-                    vec.resize(len, ' ');
-                    vec
-                })
-                .collect())
+            .map(|strings| {
+                strings
+                    .into_iter()
+                    .map(|string| {
+                        let vec = string.chars().collect::<Vec<_>>();
+                        len = cmp::max(vec.len(), len);
+                        vec
+                    })
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .map(|mut vec| {
+                        vec.resize(len, ' ');
+                        vec
+                    })
+                    .collect()
+            })
             .map(Grid::new)
             .map_err(Error::IO)
     }

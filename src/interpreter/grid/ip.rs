@@ -11,7 +11,7 @@ pub struct Ip {
     x: usize,
     y: usize,
     w: usize,
-    h: usize
+    h: usize,
 }
 
 impl Delta {
@@ -47,12 +47,7 @@ fn clamped_add(value: usize, delta: i32, max: usize) -> usize {
 
 impl Ip {
     pub fn new(x: usize, y: usize, w: usize, h: usize) -> Self {
-        Self {
-            x,
-            y,
-            w,
-            h
-        }
+        Self { x, y, w, h }
     }
 
     pub fn advance(&mut self, delta: Delta) {

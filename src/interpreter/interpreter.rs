@@ -1,11 +1,6 @@
 use crate::interpreter::core::{
-    StackValue,
-    DynamicValue,
-    QueuedState,
-    InterpreterCallback,
-    DebuggerCallback,
-    DebugInspectable,
-    InterpreterCore
+    DebugInspectable, DebuggerCallback, DynamicValue, InterpreterCallback, InterpreterCore,
+    QueuedState, StackValue,
 };
 
 use std::{
@@ -28,7 +23,7 @@ impl InterpreterCallback for Interpreter {
     fn output(&mut self, value: StackValue) {
         match value {
             StackValue::Const(i) => print!("{}", unsafe { char::from_u32_unchecked(i as u32) }),
-            _ => panic!("Interpreter output received a dynamic value")
+            _ => panic!("Interpreter output received a dynamic value"),
         }
     }
 

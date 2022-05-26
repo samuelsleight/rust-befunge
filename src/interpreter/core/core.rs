@@ -3,19 +3,10 @@ use pipeline::Stage;
 use crate::{
     error::Error,
     interpreter::{
+        core::{DebugInspectable, DebuggerCallback, InterpreterCallback, StackValue},
+        grid::{Delta, Grid, Ip},
         Error as InterpreterError,
-        core::{
-            InterpreterCallback,
-            DebuggerCallback,
-            DebugInspectable,
-            StackValue,
-        },
-        grid::{
-            Grid,
-            Ip,
-            Delta,
-        }
-    }
+    },
 };
 
 pub struct InterpreterCore<Callback, Debugger> {
@@ -27,7 +18,7 @@ pub struct InterpreterCore<Callback, Debugger> {
 enum Stringmode {
     Not,
     Once,
-    Stringmode
+    Stringmode,
 }
 
 #[derive(Clone)]
@@ -65,8 +56,7 @@ impl State {
     fn next(&mut self) -> Option<char> {
         if let Some(delta) = self.delta {
             self.ip.advance(delta);
-        }
-        else {
+        } else {
             self.delta = Delta::Right.into();
         }
 
@@ -129,7 +119,7 @@ impl DebugInspectable for State {
 impl<Callback, Debugger> Stage<Error> for InterpreterCore<Callback, Debugger>
 where
     Callback: InterpreterCallback,
-    Debugger: DebuggerCallback<State>
+    Debugger: DebuggerCallback<State>,
 {
     type Input = Grid<char>;
     type Output = Callback::End;
@@ -142,16 +132,16 @@ where
 impl<Callback, Debugger> InterpreterCore<Callback, Debugger>
 where
     Callback: InterpreterCallback,
-    Debugger: DebuggerCallback<State>
+    Debugger: DebuggerCallback<State>,
 {
     pub fn new(callback: Callback, debugger: Debugger) -> Self {
-        Self {
-            callback,
-            debugger
-        }
+        Self { callback, debugger }
     }
 
-    pub fn interpret(mut self, state: QueuedState) -> Result<<Self as Stage<Error>>::Output, Error> {
+    pub fn interpret(
+        mut self,
+        state: QueuedState,
+    ) -> Result<<Self as Stage<Error>>::Output, Error> {
         let mut state = state.0;
 
         while let Some(c) = state.next() {
@@ -167,7 +157,7 @@ where
                     if state.stringmode() == Stringmode::Once {
                         state.toggle_stringmode();
                     }
-                },
+                }
 
                 '\'' => state.once_stringmode(),
 
@@ -180,25 +170,25 @@ where
                 '#' => state.advance(),
 
                 // Value Pushing
-                c @ '0' ..= '9' => state.push(i32::from(c as u8 - b'0')),
-                c @ 'a' ..= 'f' => state.push(i32::from((c as u8 + 10) - b'a')),
+                c @ '0'..='9' => state.push(i32::from(c as u8 - b'0')),
+                c @ 'a'..='f' => state.push(i32::from((c as u8 + 10) - b'a')),
 
                 // Addition
                 '+' => match (state.pop(), state.pop()) {
                     (StackValue::Const(lhs), StackValue::Const(rhs)) => state.push(lhs + rhs),
-                    (lhs, rhs) => state.push(StackValue::add(lhs, rhs))
+                    (lhs, rhs) => state.push(StackValue::add(lhs, rhs)),
                 },
 
                 // Multiplication
                 '*' => match (state.pop(), state.pop()) {
                     (StackValue::Const(lhs), StackValue::Const(rhs)) => state.push(lhs * rhs),
-                    (lhs, rhs) => state.push(StackValue::mul(lhs, rhs))
+                    (lhs, rhs) => state.push(StackValue::mul(lhs, rhs)),
                 },
 
                 // Subtraction
                 '-' => match (state.pop(), state.pop()) {
                     (StackValue::Const(lhs), StackValue::Const(rhs)) => state.push(lhs - rhs),
-                    (lhs, rhs) => state.push(StackValue::sub(lhs, rhs))
+                    (lhs, rhs) => state.push(StackValue::sub(lhs, rhs)),
                 },
 
                 // Duplication
@@ -206,37 +196,51 @@ where
                     StackValue::Const(value) => {
                         state.push(value);
                         state.push(value);
-                    },
+                    }
 
                     StackValue::Dynamic(value) => {
                         let value = self.callback.duplicate(value);
                         state.push(value.clone());
                         state.push(value);
-                    },
+                    }
                 },
 
                 // If (Horizontal)
                 '_' => match state.pop() {
-                    StackValue::Const(value) => if value == 0 {
-                        state.set_delta(Delta::Right);
+                    StackValue::Const(value) => {
+                        if value == 0 {
+                            state.set_delta(Delta::Right);
+                        } else {
+                            state.set_delta(Delta::Left);
+                        }
                     }
-                    else {
-                        state.set_delta(Delta::Left);
-                    },
 
-                    StackValue::Dynamic(value) => return Ok(self.callback.if_zero(value, QueuedState(state.with_delta(Delta::Right)), QueuedState(state.with_delta(Delta::Left))))
+                    StackValue::Dynamic(value) => {
+                        return Ok(self.callback.if_zero(
+                            value,
+                            QueuedState(state.with_delta(Delta::Right)),
+                            QueuedState(state.with_delta(Delta::Left)),
+                        ))
+                    }
                 },
 
                 // If (Vertical)
                 '|' => match state.pop() {
-                    StackValue::Const(value) => if value == 0 {
-                        state.set_delta(Delta::Down);
+                    StackValue::Const(value) => {
+                        if value == 0 {
+                            state.set_delta(Delta::Down);
+                        } else {
+                            state.set_delta(Delta::Up);
+                        }
                     }
-                    else {
-                        state.set_delta(Delta::Up);
-                    },
 
-                    StackValue::Dynamic(value) => return Ok(self.callback.if_zero(value, QueuedState(state.with_delta(Delta::Down)), QueuedState(state.with_delta(Delta::Up))))
+                    StackValue::Dynamic(value) => {
+                        return Ok(self.callback.if_zero(
+                            value,
+                            QueuedState(state.with_delta(Delta::Down)),
+                            QueuedState(state.with_delta(Delta::Up)),
+                        ))
+                    }
                 },
 
                 // Char IO
@@ -246,7 +250,7 @@ where
                 // End
                 '@' => return Ok(self.callback.end()),
 
-                c => unimplemented!("The interpreter hit an unimplemented instruction: '{}'", c)
+                c => unimplemented!("The interpreter hit an unimplemented instruction: '{}'", c),
             }
         }
 
