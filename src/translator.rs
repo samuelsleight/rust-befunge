@@ -1,6 +1,6 @@
 use pipeline::Stage;
 
-use llvm_wrapper as llvm;
+use dragon_tamer as llvm;
 
 use std::{collections::HashMap, path::PathBuf};
 

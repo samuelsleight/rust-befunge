@@ -7,6 +7,6 @@ edition = "2018"
 [dependencies]
 structopt = "0.2.15"
 pipeline = { path = "pipeline" }
-llvm-wrapper = { path = "llvm-wrapper" }
+dragon-tamer = { git = "https://github.com/samuelsleight/dragon-tamer" }
 
 [workspace]

@@ -5,7 +5,7 @@
     allow(module_inception, stutter, cast_sign_loss)
 )]
 
-extern crate llvm_wrapper;
+extern crate dragon_tamer;
 extern crate pipeline;
 
 use std::path::PathBuf;
