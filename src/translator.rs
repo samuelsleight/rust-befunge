@@ -124,7 +124,7 @@ impl Stage<Error> for Translator {
             }
 
             match block.end() {
-                End::End => builder.build_ret(),
+                End::End => builder.build_ret(&llvm::Value::constant(0)),
                 End::If(ActionValue::Const(i), t, f) => builder.build_conditional_jump(
                     &llvm::Value::constant(*i),
                     &blocks[*t],
